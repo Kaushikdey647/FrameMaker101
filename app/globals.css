@@ -14,6 +14,9 @@
   --muted-on-green: rgba(247, 241, 230, 0.72);
   --share-bg: var(--green);
   --share-ink: var(--cream);
+  --mecha-border: 3px;
+  --mecha-radius: 2px;
+  --mecha-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.45);
 }
 
 @theme inline {
@@ -28,24 +31,99 @@ body {
   font-family: var(--font-dm-sans), system-ui, sans-serif;
   --font-display: var(--font-archivo);
   --font-deva: var(--font-noto-deva);
-  background: var(--green);
+  background-color: var(--green);
+  background-image:
+    radial-gradient(circle, rgba(247, 241, 230, 0.11) 1.1px, transparent 1.2px),
+    linear-gradient(rgba(247, 241, 230, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(247, 241, 230, 0.05) 1px, transparent 1px);
+  background-size:
+    10px 10px,
+    28px 28px,
+    28px 28px;
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+}
+
+.mecha-panel {
+  border: var(--mecha-border) solid var(--black);
+  border-radius: var(--mecha-radius);
+  box-shadow: var(--mecha-shadow);
+}
+
+.mecha-input {
+  height: 3rem;
+  width: 100%;
+  border-radius: var(--mecha-radius);
+  border: 3px solid var(--green-deep);
+  background: var(--cream);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(11, 77, 44, 0.04) 3px,
+    rgba(11, 77, 44, 0.04) 4px
+  );
+  padding: 0 1rem;
+  color: var(--ink);
+  outline: none;
+}
+
+.mecha-input:focus {
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 2px var(--green-deep);
+}
+
+.mecha-input::placeholder {
+  color: color-mix(in srgb, var(--ink-soft) 50%, transparent);
+}
+
+.mecha-btn {
+  display: flex;
+  height: 3.5rem;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--mecha-radius);
+  border: 3px solid var(--black);
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: var(--mecha-shadow);
+  transition: transform 80ms steps(2, end);
+}
+
+.mecha-btn:enabled:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.45);
+}
+
+.mecha-btn:disabled {
+  opacity: 0.45;
+}
+
+.mecha-title {
+  text-shadow:
+    3px 3px 0 var(--green-deep),
+    -1px 0 0 rgba(0, 0, 0, 0.25);
+  letter-spacing: -0.02em;
 }
 
 @keyframes land-in {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(10px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes share-photo-in {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.97);
+    transform: translateY(8px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -54,11 +132,11 @@ body {
 }
 
 .land-in {
-  animation: land-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: land-in 280ms steps(4, end) both;
 }
 
 .share-photo-enter {
-  animation: share-photo-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: share-photo-in 240ms steps(3, end) both;
 }
 
 .sr-only {

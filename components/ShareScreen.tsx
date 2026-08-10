@@ -31,19 +31,19 @@ export function ShareScreen({
   onRetake,
 }: ShareScreenProps) {
   return (
-    <div className="flex min-h-dvh flex-col bg-[var(--green)] text-[var(--cream)]">
+    <div className="flex min-h-dvh flex-col text-[var(--cream)]">
       <header className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-2">
-        <p className="font-[family-name:var(--font-display)] text-lg tracking-tight text-[var(--yellow)]">
+        <p className="mecha-title font-[family-name:var(--font-display)] text-lg text-[var(--yellow)]">
           HH GOA
         </p>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--magenta)]">
+        <p className="border-2 border-[var(--magenta)] px-2 py-0.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--magenta)]">
           #FrameInGoa
         </p>
       </header>
 
       <main className="flex flex-1 flex-col items-center justify-center px-5 py-3">
         <div
-          className={`share-photo-enter relative w-full overflow-hidden rounded-[1.35rem] bg-[var(--cream)] shadow-[0_30px_80px_-24px_rgba(0,0,0,0.55)] ring-1 ring-black/10 ${
+          className={`share-photo-enter mecha-panel relative w-full overflow-hidden bg-[var(--cream)] ${
             format === "pass" ? "max-w-[min(100%,560px)]" : "max-w-[min(100%,420px)]"
           }`}
         >
@@ -61,7 +61,7 @@ export function ShareScreen({
         </div>
 
         {format === "pass" && serial ? (
-          <p className="mt-4 font-mono text-sm font-bold tracking-wider text-[var(--yellow)]">
+          <p className="mt-4 border-2 border-[var(--yellow)] bg-[var(--green-deep)] px-3 py-1 font-mono text-sm font-bold tracking-wider text-[var(--yellow)]">
             {serial}
           </p>
         ) : null}
@@ -71,18 +71,20 @@ export function ShareScreen({
             {error}
           </p>
         ) : sharing ? (
-          <p className="mt-3 text-sm text-[var(--yellow)]" aria-live="polite">
+          <p className="mt-3 text-sm font-bold text-[var(--yellow)]" aria-live="polite">
             Preparing share…
           </p>
         ) : (
-          <p className="mt-3 text-sm text-[var(--muted-on-green)]">Looks good — send it out</p>
+          <p className="mt-3 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--muted-on-green)]">
+            Looks good — send it out
+          </p>
         )}
       </main>
 
       <footer className="px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2">
-        <div className="mx-auto max-w-md rounded-[1.75rem] bg-[var(--cream)] px-3 py-5 text-[var(--ink)] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.45)]">
-          <p className="mb-4 text-center text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[var(--ink-soft)]">
-            Share
+        <div className="mecha-panel mx-auto max-w-md bg-[var(--cream)] px-3 py-5 text-[var(--ink)]">
+          <p className="mb-4 text-center text-[0.68rem] font-bold uppercase tracking-[0.22em] text-[var(--ink-soft)]">
+            Share // Control Panel
           </p>
           <div className="flex items-start justify-evenly gap-1">
             <ShareAction
@@ -128,7 +130,7 @@ export function ShareScreen({
           type="button"
           onClick={onRetake}
           disabled={sharing}
-          className="mt-4 flex w-full items-center justify-center gap-2 py-3 text-sm font-semibold text-[var(--yellow)] transition enabled:active:opacity-80 disabled:opacity-40"
+          className="mt-4 flex w-full items-center justify-center gap-2 border-2 border-[var(--yellow)] py-3 text-sm font-bold uppercase tracking-[0.12em] text-[var(--yellow)] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 disabled:opacity-40"
         >
           <RetakeIcon />
           Take again
@@ -153,12 +155,12 @@ function ShareAction({
   title?: string;
   tone: "yellow" | "magenta" | "green";
 }) {
-  const ring =
+  const fill =
     tone === "yellow"
       ? "bg-[var(--yellow)] text-[var(--black)]"
       : tone === "magenta"
         ? "bg-[var(--magenta)] text-white"
-        : "bg-[var(--green)] text-[var(--yellow)] ring-2 ring-[var(--yellow)]";
+        : "bg-[var(--green)] text-[var(--yellow)]";
 
   return (
     <button
@@ -169,11 +171,12 @@ function ShareAction({
       className="flex w-[5.5rem] flex-col items-center gap-2.5 disabled:opacity-35"
     >
       <span
-        className={`flex h-[3.6rem] w-[3.6rem] items-center justify-center rounded-full shadow-[0_10px_24px_-10px_rgba(0,0,0,0.45)] transition enabled:active:scale-95 ${ring}`}
+        className={`flex h-[3.6rem] w-[3.6rem] items-center justify-center border-[3px] border-[var(--black)] shadow-[3px_3px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 ${fill}`}
+        style={{ clipPath: "polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)" }}
       >
         {children}
       </span>
-      <span className="text-[0.72rem] font-semibold tracking-wide text-[var(--ink-soft)]">
+      <span className="text-[0.72rem] font-bold uppercase tracking-wide text-[var(--ink-soft)]">
         {label}
       </span>
     </button>
@@ -186,9 +189,9 @@ function DownloadIcon() {
       <path
         d="M12 4v10m0 0 4-4m-4 4-4-4M5 18h14"
         stroke="currentColor"
-        strokeWidth="1.85"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeWidth="2.2"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
       />
     </svg>
   );
@@ -197,15 +200,15 @@ function DownloadIcon() {
 function AppsIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="6" cy="6" r="2.1" fill="currentColor" />
-      <circle cx="12" cy="6" r="2.1" fill="currentColor" />
-      <circle cx="18" cy="6" r="2.1" fill="currentColor" />
-      <circle cx="6" cy="12" r="2.1" fill="currentColor" />
-      <circle cx="12" cy="12" r="2.1" fill="currentColor" />
-      <circle cx="18" cy="12" r="2.1" fill="currentColor" />
-      <circle cx="6" cy="18" r="2.1" fill="currentColor" />
-      <circle cx="12" cy="18" r="2.1" fill="currentColor" />
-      <circle cx="18" cy="18" r="2.1" fill="currentColor" />
+      <rect x="3" y="3" width="6" height="6" fill="currentColor" />
+      <rect x="9" y="3" width="6" height="6" fill="currentColor" />
+      <rect x="15" y="3" width="6" height="6" fill="currentColor" />
+      <rect x="3" y="9" width="6" height="6" fill="currentColor" />
+      <rect x="9" y="9" width="6" height="6" fill="currentColor" />
+      <rect x="15" y="9" width="6" height="6" fill="currentColor" />
+      <rect x="3" y="15" width="6" height="6" fill="currentColor" />
+      <rect x="9" y="15" width="6" height="6" fill="currentColor" />
+      <rect x="15" y="15" width="6" height="6" fill="currentColor" />
     </svg>
   );
 }
@@ -224,15 +227,15 @@ function RetakeIcon() {
       <path
         d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2M20.5 12a8.5 8.5 0 0 1-14.3 6.2"
         stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
+        strokeWidth="2"
+        strokeLinecap="square"
       />
       <path
         d="M17 3.5v4.2h-4.2M7 20.5v-4.2h4.2"
         stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeWidth="2"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
       />
     </svg>
   );

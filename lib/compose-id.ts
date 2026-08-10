@@ -2,7 +2,7 @@ import { JPEG_QUALITY } from "./compose";
 import { pickBuilderTitle } from "./builder-titles";
 import { GOA_DEST_IATA, type IndiaAirport } from "./india-airports";
 
-/** Passport-style Builder ID — 2:1 landscape. */
+/** Passport-style Builder ID — 2:1 landscape, mecha-poster graphic language. */
 export const ID_WIDTH = 1600;
 export const ID_HEIGHT = 800;
 
@@ -22,24 +22,6 @@ export type ComposeIdInput = {
   serial: string;
   origin: IndiaAirport;
 };
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  const radius = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + w, y, x + w, y + h, radius);
-  ctx.arcTo(x + w, y + h, x, y + h, radius);
-  ctx.arcTo(x, y + h, x, y, radius);
-  ctx.arcTo(x, y, x + w, y, radius);
-  ctx.closePath();
-}
 
 function coverRect(
   ctx: CanvasRenderingContext2D,
@@ -62,7 +44,7 @@ function coverRect(
   ctx.restore();
 }
 
-function drawSecurityPattern(
+function drawHalftoneGrid(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -73,21 +55,30 @@ function drawSecurityPattern(
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-  ctx.globalAlpha = 0.06;
-  ctx.strokeStyle = GREEN;
-  ctx.lineWidth = 1.2;
-  for (let i = -h; i < w + h; i += 20) {
+
+  ctx.strokeStyle = "rgba(11,77,44,0.08)";
+  ctx.lineWidth = 1;
+  for (let gx = x; gx < x + w; gx += 24) {
     ctx.beginPath();
-    ctx.moveTo(x + i, y);
-    ctx.bezierCurveTo(
-      x + i + 40,
-      y + h * 0.33,
-      x + i - 40,
-      y + h * 0.66,
-      x + i,
-      y + h,
-    );
+    ctx.moveTo(gx, y);
+    ctx.lineTo(gx, y + h);
     ctx.stroke();
+  }
+  for (let gy = y; gy < y + h; gy += 24) {
+    ctx.beginPath();
+    ctx.moveTo(x, gy);
+    ctx.lineTo(x + w, gy);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "rgba(11,77,44,0.12)";
+  for (let row = 0; row < h; row += 10) {
+    for (let col = 0; col < w; col += 10) {
+      const r = ((row + col) % 20 === 0 ? 1.6 : 1.0);
+      ctx.beginPath();
+      ctx.arc(x + col + 2, y + row + 2, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
   ctx.restore();
 }
@@ -108,12 +99,18 @@ function fitText(
   return size;
 }
 
-function fieldLabel(ctx: CanvasRenderingContext2D, label: string, x: number, y: number) {
+function fieldLabel(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, w: number) {
   ctx.fillStyle = MUTED;
-  ctx.font = `600 14px "DM Sans", system-ui, sans-serif`;
+  ctx.font = `700 13px "DM Sans", system-ui, sans-serif`;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.fillText(label.toUpperCase(), x, y);
+  ctx.strokeStyle = GREEN;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + 6);
+  ctx.lineTo(x + Math.min(w, 120), y + 6);
+  ctx.stroke();
 }
 
 function fieldValue(
@@ -160,8 +157,8 @@ function buildMrz(name: string, serial: string, role: string): [string, string] 
   return [line1, line2];
 }
 
-/** Solid dark-green palm + sun + beach silhouette. */
-function drawPalmBeach(
+/** Solid dark-green angular palm + sun (mecha silhouette). */
+function drawMechaPalm(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -172,45 +169,61 @@ function drawPalmBeach(
   ctx.scale(scale, scale);
   ctx.fillStyle = GREEN;
   ctx.strokeStyle = GREEN;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
 
-  // Beach mound
+  // Angular sun (star)
   ctx.beginPath();
-  ctx.ellipse(0, 28, 52, 14, 0, 0, Math.PI * 2);
+  const pts = [
+    [0, -28],
+    [6, -10],
+    [24, -10],
+    [10, 2],
+    [16, 20],
+    [0, 10],
+    [-16, 20],
+    [-10, 2],
+    [-24, -10],
+    [-6, -10],
+  ];
+  for (let i = 0; i < pts.length; i++) {
+    const [px, py] = pts[i]!;
+    if (i === 0) ctx.moveTo(px + 34, py - 8);
+    else ctx.lineTo(px + 34, py - 8);
+  }
+  ctx.closePath();
   ctx.fill();
 
-  // Sun disc
-  ctx.beginPath();
-  ctx.arc(36, -22, 16, 0, Math.PI * 2);
-  ctx.fill();
+  // Beach slab
+  ctx.fillRect(-40, 22, 78, 12);
 
   // Trunk
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 6;
   ctx.beginPath();
-  ctx.moveTo(-10, 24);
-  ctx.quadraticCurveTo(-18, -8, -8, -48);
+  ctx.moveTo(-8, 22);
+  ctx.lineTo(-14, -8);
+  ctx.lineTo(-6, -40);
   ctx.stroke();
 
-  // Fronds
-  ctx.lineWidth = 4.5;
-  for (const [cx, cy] of [
-    [-52, -36],
-    [-34, -62],
-    [-4, -68],
-    [24, -58],
-    [40, -34],
+  // Angular fronds
+  ctx.lineWidth = 5;
+  for (const [ax, ay] of [
+    [-48, -28],
+    [-30, -52],
+    [2, -56],
+    [28, -44],
+    [40, -22],
   ] as const) {
     ctx.beginPath();
-    ctx.moveTo(-8, -46);
-    ctx.quadraticCurveTo((cx - 8) * 0.45 - 4, cy + 10, cx, cy);
+    ctx.moveTo(-6, -38);
+    ctx.lineTo(ax, ay);
     ctx.stroke();
   }
 
   ctx.restore();
 }
 
-/** Large origin → GOI arc in dark green on cream (no labels, no box). */
+/** Angular dashed polyline origin → GOI. */
 function drawFlightPath(
   ctx: CanvasRenderingContext2D,
   originIata: string,
@@ -218,48 +231,58 @@ function drawFlightPath(
   topY: number,
   width: number,
 ) {
-  const startX = leftX + 40;
-  const endX = leftX + width - 110;
-  const baseY = topY + 118;
-  const peakY = topY + 12;
+  // Mini grid behind path
+  ctx.save();
+  ctx.strokeStyle = "rgba(11,77,44,0.15)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 6; i++) {
+    ctx.beginPath();
+    ctx.moveTo(leftX + i * 70, topY);
+    ctx.lineTo(leftX + i * 70, topY + 150);
+    ctx.stroke();
+  }
+  ctx.restore();
 
+  const startX = leftX + 36;
+  const endX = leftX + width - 120;
+  const baseY = topY + 120;
+  const midX = (startX + endX) / 2;
+  const peakY = topY + 18;
+
+  ctx.fillStyle = GREEN;
+  ctx.font = `700 46px ui-monospace, SFMono-Regular, Menlo, monospace`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = GREEN;
-  ctx.font = `700 44px ui-monospace, SFMono-Regular, Menlo, monospace`;
   ctx.fillText(originIata, startX, baseY);
   ctx.fillText(GOA_DEST_IATA, endX, baseY);
 
-  const pathStart = startX + 48;
-  const pathEnd = endX - 48;
-  const cpx = (pathStart + pathEnd) / 2;
+  const pathStart = startX + 52;
+  const pathEnd = endX - 52;
   ctx.strokeStyle = GREEN;
-  ctx.lineWidth = 3.25;
-  ctx.lineCap = "round";
-  ctx.setLineDash([9, 9]);
+  ctx.lineWidth = 3.5;
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
+  ctx.setLineDash([10, 8]);
   ctx.beginPath();
-  ctx.moveTo(pathStart, baseY - 8);
-  ctx.quadraticCurveTo(cpx, peakY, pathEnd, baseY - 8);
+  ctx.moveTo(pathStart, baseY - 10);
+  ctx.lineTo(midX - 40, peakY + 36);
+  ctx.lineTo(midX, peakY);
+  ctx.lineTo(midX + 40, peakY + 36);
+  ctx.lineTo(pathEnd, baseY - 10);
   ctx.stroke();
   ctx.setLineDash([]);
 
-  const t = 0.5;
-  const mx =
-    (1 - t) * (1 - t) * pathStart + 2 * (1 - t) * t * cpx + t * t * pathEnd;
-  const my =
-    (1 - t) * (1 - t) * (baseY - 8) +
-    2 * (1 - t) * t * peakY +
-    t * t * (baseY - 8);
+  // Angular plane chevron at peak
   ctx.fillStyle = GREEN;
   ctx.beginPath();
-  ctx.moveTo(mx + 12, my);
-  ctx.lineTo(mx - 9, my - 8);
-  ctx.lineTo(mx - 4, my);
-  ctx.lineTo(mx - 9, my + 8);
+  ctx.moveTo(midX + 14, peakY + 4);
+  ctx.lineTo(midX - 10, peakY - 8);
+  ctx.lineTo(midX - 4, peakY + 4);
+  ctx.lineTo(midX - 10, peakY + 16);
   ctx.closePath();
   ctx.fill();
 
-  drawPalmBeach(ctx, endX + 58, baseY - 4, 1.15);
+  drawMechaPalm(ctx, endX + 62, baseY - 2, 1.2);
 }
 
 function canvasToJpeg(canvas: HTMLCanvasElement): Promise<Blob> {
@@ -287,68 +310,74 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D canvas unavailable");
 
+  // Thick green outer frame
   ctx.fillStyle = GREEN;
   ctx.fillRect(0, 0, ID_WIDTH, ID_HEIGHT);
 
-  const margin = 24;
+  const margin = 18;
   const pageX = margin;
   const pageY = margin;
   const pageW = ID_WIDTH - margin * 2;
   const pageH = ID_HEIGHT - margin * 2;
 
   ctx.fillStyle = PAPER;
-  roundRect(ctx, pageX, pageY, pageW, pageH, 16);
-  ctx.fill();
-  drawSecurityPattern(ctx, pageX, pageY, pageW, pageH);
+  ctx.fillRect(pageX, pageY, pageW, pageH);
+  drawHalftoneGrid(ctx, pageX, pageY, pageW, pageH);
 
-  // Header
-  const stripH = 58;
+  // Hard black inner stroke
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(pageX + 2, pageY + 2, pageW - 4, pageH - 4);
+
+  // Header bar
+  const stripH = 56;
   ctx.fillStyle = GREEN;
-  roundRect(ctx, pageX, pageY, pageW, stripH + 14, 16);
-  ctx.fill();
-  ctx.fillRect(pageX, pageY + 20, pageW, stripH - 6);
+  ctx.fillRect(pageX, pageY, pageW, stripH);
 
   ctx.fillStyle = YELLOW;
   ctx.font = `400 30px "Archivo Black", Impact, sans-serif`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText("HACKER HOUSE", pageX + 32, pageY + stripH / 2 + 2);
+  ctx.fillText("HACKER HOUSE", pageX + 28, pageY + stripH / 2);
 
   ctx.fillStyle = CREAM;
-  ctx.font = `700 16px "DM Sans", system-ui, sans-serif`;
+  ctx.font = `700 15px "DM Sans", system-ui, sans-serif`;
   ctx.textAlign = "right";
   ctx.fillText(
-    "HH GOA 2026  ·  BUILDER PASSPORT",
-    pageX + pageW - 32,
-    pageY + stripH / 2 + 2,
+    "HH GOA 2026  //  BUILDER PASSPORT",
+    pageX + pageW - 28,
+    pageY + stripH / 2,
   );
 
   ctx.fillStyle = YELLOW;
-  ctx.fillRect(pageX, pageY + stripH + 10, pageW, 3);
+  ctx.fillRect(pageX, pageY + stripH, pageW, 5);
   ctx.fillStyle = MAGENTA;
-  ctx.fillRect(pageX, pageY + stripH + 13, pageW, 3);
+  ctx.fillRect(pageX, pageY + stripH + 5, pageW, 5);
 
-  const mrzH = 84;
+  const mrzH = 80;
   const mrzY = pageY + pageH - mrzH;
-  const bodyTop = pageY + stripH + 28;
-  const bodyBottom = mrzY - 18;
+  const bodyTop = pageY + stripH + 22;
+  const bodyBottom = mrzY - 14;
   const bodyH = bodyBottom - bodyTop;
 
-  // Full-height photo column (left)
-  const photoX = pageX + 28;
+  // Full-height photo
+  const photoX = pageX + 22;
   const photoY = bodyTop;
   const photoH = bodyH;
   const photoW = Math.round(photoH * 0.72);
   ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(photoX - 4, photoY - 4, photoW + 8, photoH + 8);
-  ctx.strokeStyle = GREEN;
-  ctx.lineWidth = 3;
-  ctx.strokeRect(photoX - 4, photoY - 4, photoW + 8, photoH + 8);
+  ctx.fillRect(photoX, photoY, photoW, photoH);
   coverRect(ctx, photo, photoX, photoY, photoW, photoH);
+  ctx.strokeStyle = GREEN;
+  ctx.lineWidth = 5;
+  ctx.strokeRect(photoX, photoY, photoW, photoH);
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(photoX + 4, photoY + 4, photoW - 8, photoH - 8);
 
   ctx.strokeStyle = YELLOW;
-  ctx.lineWidth = 4;
-  const tick = 22;
+  ctx.lineWidth = 5;
+  const tick = 24;
   for (const [tx, ty, dx, dy] of [
     [photoX, photoY, 1, 0],
     [photoX, photoY, 0, 1],
@@ -365,80 +394,81 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
     ctx.stroke();
   }
 
-  const contentLeft = photoX + photoW + 40;
-  const contentRight = pageX + pageW - 36;
+  const contentLeft = photoX + photoW + 36;
+  const contentRight = pageX + pageW - 28;
   const contentW = contentRight - contentLeft;
-
-  // Biodata (upper-left of content) + flight path (upper-right)
-  const flightW = Math.min(420, Math.floor(contentW * 0.48));
+  const flightW = Math.min(440, Math.floor(contentW * 0.5));
   const flightLeft = contentRight - flightW;
-  const dataW = flightLeft - contentLeft - 24;
+  const dataW = flightLeft - contentLeft - 20;
 
-  drawFlightPath(ctx, origin.iata, flightLeft, bodyTop + 8, flightW);
+  drawFlightPath(ctx, origin.iata, flightLeft, bodyTop + 4, flightW);
 
-  let row = bodyTop + 12;
-  fieldLabel(ctx, "Type / Code", contentLeft, row);
-  fieldValue(ctx, "P / HHG · BUILDER ID", contentLeft, row + 30, dataW, GREEN, 24);
-  row += 72;
+  let row = bodyTop + 10;
+  fieldLabel(ctx, "Type / Code", contentLeft, row, dataW);
+  fieldValue(ctx, "P / HHG · BUILDER ID", contentLeft, row + 32, dataW, GREEN, 24);
+  row += 74;
 
-  fieldLabel(ctx, "Full name", contentLeft, row);
-  fieldValue(ctx, displayName, contentLeft, row + 34, dataW, INK, 40);
-  row += 84;
+  fieldLabel(ctx, "Full name", contentLeft, row, dataW);
+  fieldValue(ctx, displayName, contentLeft, row + 36, dataW, INK, 40);
+  row += 86;
 
-  fieldLabel(ctx, "Stack / role", contentLeft, row);
-  fieldValue(ctx, displayRole, contentLeft, row + 30, dataW, MAGENTA, 26);
-  row += 72;
+  fieldLabel(ctx, "Stack / role", contentLeft, row, dataW);
+  fieldValue(ctx, displayRole, contentLeft, row + 32, dataW, MAGENTA, 26);
+  row += 74;
 
-  fieldLabel(ctx, "Assigned title", contentLeft, row);
-  fieldValue(ctx, title, contentLeft, row + 30, dataW, GREEN, 26);
-  row += 78;
+  fieldLabel(ctx, "Assigned title", contentLeft, row, dataW);
+  fieldValue(ctx, title, contentLeft, row + 32, dataW, GREEN, 26);
+  row += 80;
 
-  // Document banner
-  const boxH = 70;
-  const boxY = Math.min(bodyBottom - boxH, Math.max(row + 12, bodyTop + 280));
+  const boxH = 68;
+  const boxY = Math.min(bodyBottom - boxH, Math.max(row + 8, bodyTop + 290));
   ctx.fillStyle = GREEN;
-  roundRect(ctx, contentLeft, boxY, contentW, boxH, 12);
-  ctx.fill();
+  ctx.fillRect(contentLeft, boxY, contentW, boxH);
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(contentLeft, boxY, contentW, boxH);
+  ctx.fillStyle = YELLOW;
+  ctx.fillRect(contentLeft, boxY, 8, boxH);
 
   ctx.fillStyle = YELLOW;
-  ctx.font = `700 13px "DM Sans", system-ui, sans-serif`;
+  ctx.font = `700 12px "DM Sans", system-ui, sans-serif`;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("DOCUMENT NO.", contentLeft + 22, boxY + 24);
+  ctx.fillText("DOCUMENT NO.", contentLeft + 22, boxY + 22);
   ctx.font = `700 26px ui-monospace, SFMono-Regular, Menlo, monospace`;
-  ctx.fillText(serial, contentLeft + 22, boxY + 52);
+  ctx.fillText(serial, contentLeft + 22, boxY + 50);
 
   ctx.fillStyle = CREAM;
-  ctx.font = `700 13px "DM Sans", system-ui, sans-serif`;
+  ctx.font = `700 12px "DM Sans", system-ui, sans-serif`;
   ctx.textAlign = "right";
-  ctx.fillText("VALID", contentRight - 22, boxY + 24);
+  ctx.fillText("VALID", contentRight - 18, boxY + 22);
   ctx.font = `700 22px "DM Sans", system-ui, sans-serif`;
-  ctx.fillText("GOA 2026", contentRight - 22, boxY + 52);
+  ctx.fillText("GOA 2026", contentRight - 18, boxY + 50);
 
-  // MRZ
+  // MRZ + hatch
   ctx.fillStyle = CREAM;
   ctx.fillRect(pageX, mrzY, pageW, mrzH);
   ctx.fillStyle = GREEN_DEEP;
-  ctx.globalAlpha = 0.07;
-  for (let i = 0; i < pageW; i += 6) {
+  for (let i = 0; i < pageW; i += 4) {
+    ctx.globalAlpha = i % 8 === 0 ? 0.14 : 0.06;
     ctx.fillRect(pageX + i, mrzY, 2, mrzH);
   }
   ctx.globalAlpha = 1;
   ctx.fillStyle = MAGENTA;
-  ctx.fillRect(pageX, mrzY, pageW, 4);
+  ctx.fillRect(pageX, mrzY, pageW, 5);
 
   const [mrz1, mrz2] = buildMrz(displayName, serial, displayRole);
   ctx.fillStyle = INK;
-  ctx.font = `600 19px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  ctx.font = `700 18px ui-monospace, SFMono-Regular, Menlo, monospace`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(mrz1, pageX + 32, mrzY + 34);
-  ctx.fillText(mrz2, pageX + 32, mrzY + 62);
+  ctx.fillText(mrz1, pageX + 28, mrzY + 32);
+  ctx.fillText(mrz2, pageX + 28, mrzY + 58);
 
   ctx.fillStyle = MUTED;
-  ctx.font = `600 12px "DM Sans", system-ui, sans-serif`;
+  ctx.font = `700 11px "DM Sans", system-ui, sans-serif`;
   ctx.textAlign = "right";
-  ctx.fillText("#FrameInGoa", pageX + pageW - 28, mrzY + 18);
+  ctx.fillText("#FrameInGoa", pageX + pageW - 24, mrzY + 16);
 
   return { blob: await canvasToJpeg(canvas), title };
 }

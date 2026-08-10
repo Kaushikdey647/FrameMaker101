@@ -40,7 +40,7 @@ export function AirportPicker({ value, onChange, disabled }: AirportPickerProps)
 
   return (
     <div ref={rootRef} className="relative block">
-      <span className="mb-1.5 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[var(--yellow)]">
+      <span className="mb-1.5 block text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[var(--yellow)]">
         Flying from
       </span>
       <input
@@ -58,13 +58,13 @@ export function AirportPicker({ value, onChange, disabled }: AirportPickerProps)
           setOpen(true);
           if (value) onChange(null);
         }}
-        className="h-12 w-full rounded-full border-0 bg-[var(--cream)] px-4 text-[var(--ink)] outline-none ring-2 ring-transparent placeholder:text-[var(--ink-soft)]/50 focus:ring-[var(--yellow)]"
+        className="mecha-input"
       />
       {open && !disabled ? (
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-30 mt-2 max-h-56 w-full overflow-auto rounded-2xl bg-[var(--cream)] py-2 text-left shadow-[0_20px_40px_-16px_rgba(0,0,0,0.45)] ring-1 ring-black/10"
+          className="mecha-panel absolute z-30 mt-2 max-h-56 w-full overflow-auto bg-[var(--cream)] py-1 text-left"
         >
           {results.length === 0 ? (
             <li className="px-4 py-2 text-sm text-[var(--ink-soft)]">No airports match</li>
@@ -73,7 +73,7 @@ export function AirportPicker({ value, onChange, disabled }: AirportPickerProps)
               <li key={a.iata} role="option">
                 <button
                   type="button"
-                  className="flex w-full flex-col px-4 py-2 text-left hover:bg-[var(--green)]/10"
+                  className="flex w-full flex-col border-b border-[var(--green)]/15 px-4 py-2 text-left last:border-0 hover:bg-[var(--yellow)]"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => select(a)}
                 >
