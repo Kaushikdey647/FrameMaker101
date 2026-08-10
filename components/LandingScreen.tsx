@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, type ChangeEvent } from "react";
 import { AirportPicker } from "./AirportPicker";
 import type { IndiaAirport } from "@/lib/india-airports";
 
@@ -17,8 +18,7 @@ type LandingScreenProps = {
   busy: boolean;
   converting: boolean;
   error: string | null;
-  onCamera: () => void;
-  onGallery: () => void;
+  onPhotoFile: (file: File) => void;
 };
 
 export function LandingScreen({
@@ -33,9 +33,14 @@ export function LandingScreen({
   busy,
   converting,
   error,
-  onCamera,
-  onGallery,
+  onPhotoFile,
 }: LandingScreenProps) {
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const changeHandledRef = useRef(false);
+  const onPhotoFileRef = useRef(onPhotoFile);
+  onPhotoFileRef.current = onPhotoFile;
+
   const status = converting
     ? "Converting…"
     : busy
@@ -44,6 +49,44 @@ export function LandingScreen({
 
   const passReady =
     name.trim().length >= 2 && role.trim().length >= 1 && origin !== null;
+  const pickDisabled = busy || (mode === "pass" && !passReady);
+
+  function takeFile(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    // Allow re-picking the same file on next open (iOS keeps last path).
+    input.value = "";
+    if (file) onPhotoFileRef.current(file);
+  }
+
+  function onFileChange(e: ChangeEvent<HTMLInputElement>) {
+    changeHandledRef.current = true;
+    takeFile(e.target);
+  }
+
+  // Chrome iOS: after Capture, focus returns but `change` sometimes never fires.
+  useEffect(() => {
+    function flushIfNeeded() {
+      if (document.visibilityState && document.visibilityState !== "visible") return;
+      window.setTimeout(() => {
+        if (changeHandledRef.current) {
+          changeHandledRef.current = false;
+          return;
+        }
+        for (const input of [cameraInputRef.current, galleryInputRef.current]) {
+          if (input?.files?.length) {
+            takeFile(input);
+            break;
+          }
+        }
+      }, 400);
+    }
+    window.addEventListener("focus", flushIfNeeded);
+    document.addEventListener("visibilitychange", flushIfNeeded);
+    return () => {
+      window.removeEventListener("focus", flushIfNeeded);
+      document.removeEventListener("visibilitychange", flushIfNeeded);
+    };
+  }, []);
 
   return (
     <div className="relative flex min-h-dvh flex-col">
@@ -117,22 +160,44 @@ export function LandingScreen({
         ) : null}
 
         <div className="mt-6 flex w-full max-w-sm flex-col gap-3">
-          <button
-            type="button"
-            onClick={onCamera}
-            disabled={busy || (mode === "pass" && !passReady)}
-            className="mecha-btn bg-[var(--magenta)] text-white"
+          {/*
+            iOS Chrome/Safari: programmatic input.click() on clipped/hidden
+            file inputs often no-ops. Overlay a real file input so the tap
+            hits the control directly.
+          */}
+          <label
+            className={`mecha-btn relative overflow-hidden bg-[var(--magenta)] text-white ${
+              pickDisabled ? "pointer-events-none opacity-45" : ""
+            }`}
+            aria-disabled={pickDisabled}
           >
             Take a photo
-          </button>
-          <button
-            type="button"
-            onClick={onGallery}
-            disabled={busy || (mode === "pass" && !passReady)}
-            className="mecha-btn bg-[var(--yellow)] text-[var(--black)]"
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              disabled={pickDisabled}
+              className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+              onChange={onFileChange}
+            />
+          </label>
+          <label
+            className={`mecha-btn relative overflow-hidden bg-[var(--yellow)] text-[var(--black)] ${
+              pickDisabled ? "pointer-events-none opacity-45" : ""
+            }`}
+            aria-disabled={pickDisabled}
           >
             Choose from gallery
-          </button>
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*,.heic,.heif,image/heic,image/heif"
+              disabled={pickDisabled}
+              className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+              onChange={onFileChange}
+            />
+          </label>
         </div>
 
         {status ? (

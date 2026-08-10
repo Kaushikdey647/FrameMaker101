@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useState } from "react";
 import { blobToFrameFile, composeFrame } from "@/lib/compose";
 import { blobToPassFile, composeBuilderId } from "@/lib/compose-id";
 import { decodePhoto } from "@/lib/decode";
@@ -40,8 +40,6 @@ function revokeVariants(variants: StyleVariant[]) {
 }
 
 export function FrameStudio() {
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<FormatMode>("frame");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -160,12 +158,6 @@ export function FrameStudio() {
     }
   }
 
-  function onInputChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (file) void handleFile(file);
-  }
-
   function onRetake() {
     setVariants((prev) => {
       revokeVariants(prev);
@@ -263,22 +255,6 @@ export function FrameStudio() {
 
   return (
     <>
-      <input
-        ref={cameraRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="sr-only"
-        onChange={onInputChange}
-      />
-      <input
-        ref={galleryRef}
-        type="file"
-        accept="image/*,.heic,.heif,image/heic,image/heif"
-        className="sr-only"
-        onChange={onInputChange}
-      />
-
       {phase === "share" && ready ? (
         <ShareScreen
           previewUrl={ready.previewUrl}
@@ -316,8 +292,7 @@ export function FrameStudio() {
           busy={busy}
           converting={converting}
           error={error}
-          onCamera={() => cameraRef.current?.click()}
-          onGallery={() => galleryRef.current?.click()}
+          onPhotoFile={(file) => void handleFile(file)}
         />
       )}
     </>

@@ -10,6 +10,13 @@ export const BRAND = {
   black: "#111111",
 } as const;
 
+export type FrameLayout =
+  | "classic"
+  | "sunburst"
+  | "stadium"
+  | "inset"
+  | "orbit"
+  | "seal";
 export type FrameBg = "green" | "deep" | "creamHalftone";
 export type FrameRing =
   | "conicBrand"
@@ -19,28 +26,38 @@ export type FrameRing =
 export type FrameStroke = "cream" | "yellow" | "magenta";
 export type FrameArcInk = "cream" | "black";
 export type FrameStamp = "outlineMagenta" | "flatYellow" | "boxed";
-export type FrameOuter = "none" | "hardSquare" | "ticketNotch";
 
 export type FrameTheme = {
   id: string;
   name: string;
+  frameLayout: FrameLayout;
   bg: FrameBg;
   ring: FrameRing;
   innerStroke: FrameStroke;
   arcInk: FrameArcInk;
   stamp: FrameStamp;
   diamonds: boolean;
-  outerFrame: FrameOuter;
 };
 
-export type IdLayout = "posterStub" | "fullBleedStubThin" | "bannerTop";
+export type IdLayout =
+  | "posterStub"
+  | "boardingPass"
+  | "manifest"
+  | "arrivalGate"
+  | "lanyard"
+  | "coastline";
 export type IdPhotoTreatment = "clean" | "greenWash" | "halftoneEdge";
 export type IdAccentRail = "magenta" | "yellow" | "dual";
 export type IdTitleMark = "none" | "wordmarkSVG" | "textChip";
 export type IdStub = "paper" | "green" | "magenta";
-export type IdRouteStyle = "angularYellow" | "dashedCream" | "minimalIata";
-export type IdNameBlock = "bottomLeft" | "centerStack" | "stubOnlyName";
-export type IdStampTitle = "magentaBar" | "yellowOutline" | "creamChip";
+export type RouteMotif =
+  | "boardingStrip"
+  | "splitFlap"
+  | "coastCrest"
+  | "tapeSlash"
+  | "radarHop";
+export type IdNameBlock = "bottomLeft" | "centerStack" | "stubOnlyName" | "badgeStack";
+export type IdStampTitle = "magentaBar" | "yellowOutline" | "creamChip" | "flapCell";
 
 export type IdTheme = {
   id: string;
@@ -50,81 +67,83 @@ export type IdTheme = {
   accentRail: IdAccentRail;
   titleMark: IdTitleMark;
   stub: IdStub;
-  routeStyle: IdRouteStyle;
+  routeMotif: RouteMotif;
   nameBlock: IdNameBlock;
   stampTitle: IdStampTitle;
   stubHRatio: number;
 };
 
+/** Each theme uses a unique frameLayout. */
 export const FRAME_THEMES: readonly FrameTheme[] = [
   {
     id: "ring-classic",
     name: "Classic Ring",
+    frameLayout: "classic",
     bg: "green",
     ring: "conicBrand",
     innerStroke: "cream",
     arcInk: "cream",
     stamp: "outlineMagenta",
     diamonds: true,
-    outerFrame: "none",
   },
   {
-    id: "hot-stub",
-    name: "Hot Stub",
-    bg: "deep",
-    ring: "solidMagenta",
-    innerStroke: "yellow",
-    arcInk: "cream",
-    stamp: "boxed",
-    diamonds: true,
-    outerFrame: "none",
-  },
-  {
-    id: "sun-field",
-    name: "Sun Field",
+    id: "sunburst",
+    name: "Sunburst",
+    frameLayout: "sunburst",
     bg: "deep",
     ring: "solidYellow",
     innerStroke: "cream",
     arcInk: "black",
     stamp: "flatYellow",
     diamonds: false,
-    outerFrame: "none",
   },
   {
-    id: "split-signal",
-    name: "Split Signal",
+    id: "stadium",
+    name: "Stadium Badge",
+    frameLayout: "stadium",
     bg: "green",
-    ring: "splitGreenMagenta",
+    ring: "conicBrand",
     innerStroke: "cream",
     arcInk: "cream",
-    stamp: "outlineMagenta",
+    stamp: "boxed",
     diamonds: false,
-    outerFrame: "hardSquare",
   },
   {
-    id: "cream-halftone",
-    name: "Cream Dot",
+    id: "inset-tile",
+    name: "Inset Tile",
+    frameLayout: "inset",
     bg: "creamHalftone",
     ring: "solidMagenta",
     innerStroke: "yellow",
     arcInk: "black",
     stamp: "boxed",
     diamonds: true,
-    outerFrame: "none",
   },
   {
-    id: "night-ticket",
-    name: "Night Ticket",
+    id: "orbit",
+    name: "Orbit",
+    frameLayout: "orbit",
     bg: "deep",
+    ring: "splitGreenMagenta",
+    innerStroke: "yellow",
+    arcInk: "cream",
+    stamp: "outlineMagenta",
+    diamonds: true,
+  },
+  {
+    id: "seal",
+    name: "Official Seal",
+    frameLayout: "seal",
+    bg: "green",
     ring: "solidYellow",
     innerStroke: "magenta",
     arcInk: "cream",
     stamp: "outlineMagenta",
-    diamonds: true,
-    outerFrame: "ticketNotch",
+    diamonds: false,
   },
 ] as const;
 
+/** Each theme uses a unique layout + distinct routeMotif. */
 export const ID_THEMES: readonly IdTheme[] = [
   {
     id: "poster-stub",
@@ -134,75 +153,75 @@ export const ID_THEMES: readonly IdTheme[] = [
     accentRail: "magenta",
     titleMark: "textChip",
     stub: "paper",
-    routeStyle: "angularYellow",
-    nameBlock: "bottomLeft",
-    stampTitle: "magentaBar",
-    stubHRatio: 0.22,
-  },
-  {
-    id: "sunrise-bleed",
-    name: "Sunrise Bleed",
-    layout: "fullBleedStubThin",
-    photoTreatment: "greenWash",
-    accentRail: "dual",
-    titleMark: "wordmarkSVG",
-    stub: "paper",
-    routeStyle: "dashedCream",
-    nameBlock: "bottomLeft",
-    stampTitle: "creamChip",
-    stubHRatio: 0.16,
-  },
-  {
-    id: "mecha-banner",
-    name: "Mecha Banner",
-    layout: "bannerTop",
-    photoTreatment: "clean",
-    accentRail: "yellow",
-    titleMark: "wordmarkSVG",
-    stub: "green",
-    routeStyle: "angularYellow",
+    routeMotif: "boardingStrip",
     nameBlock: "bottomLeft",
     stampTitle: "magentaBar",
     stubHRatio: 0.2,
   },
   {
-    id: "magenta-stamp",
-    name: "Magenta Stamp",
-    layout: "posterStub",
+    id: "boarding-pass",
+    name: "Boarding Pass",
+    layout: "boardingPass",
+    photoTreatment: "clean",
+    accentRail: "dual",
+    titleMark: "textChip",
+    stub: "paper",
+    routeMotif: "boardingStrip",
+    nameBlock: "bottomLeft",
+    stampTitle: "creamChip",
+    stubHRatio: 0.14,
+  },
+  {
+    id: "manifest",
+    name: "Flight Manifest",
+    layout: "manifest",
+    photoTreatment: "greenWash",
+    accentRail: "magenta",
+    titleMark: "none",
+    stub: "paper",
+    routeMotif: "tapeSlash",
+    nameBlock: "bottomLeft",
+    stampTitle: "yellowOutline",
+    stubHRatio: 0.18,
+  },
+  {
+    id: "arrival-gate",
+    name: "Arrival Gate",
+    layout: "arrivalGate",
+    photoTreatment: "clean",
+    accentRail: "yellow",
+    titleMark: "wordmarkSVG",
+    stub: "green",
+    routeMotif: "splitFlap",
+    nameBlock: "bottomLeft",
+    stampTitle: "flapCell",
+    stubHRatio: 0.18,
+  },
+  {
+    id: "lanyard",
+    name: "Lanyard Pass",
+    layout: "lanyard",
     photoTreatment: "clean",
     accentRail: "magenta",
     titleMark: "textChip",
-    stub: "magenta",
-    routeStyle: "angularYellow",
-    nameBlock: "centerStack",
-    stampTitle: "yellowOutline",
-    stubHRatio: 0.22,
-  },
-  {
-    id: "halftone-dock",
-    name: "Halftone Dock",
-    layout: "posterStub",
-    photoTreatment: "halftoneEdge",
-    accentRail: "dual",
-    titleMark: "none",
     stub: "paper",
-    routeStyle: "dashedCream",
-    nameBlock: "bottomLeft",
-    stampTitle: "creamChip",
-    stubHRatio: 0.22,
+    routeMotif: "radarHop",
+    nameBlock: "badgeStack",
+    stampTitle: "magentaBar",
+    stubHRatio: 0.12,
   },
   {
-    id: "goi-strip",
-    name: "GOI Strip",
-    layout: "fullBleedStubThin",
-    photoTreatment: "greenWash",
+    id: "coastline",
+    name: "Coastline",
+    layout: "coastline",
+    photoTreatment: "halftoneEdge",
     accentRail: "yellow",
     titleMark: "none",
     stub: "green",
-    routeStyle: "minimalIata",
+    routeMotif: "coastCrest",
     nameBlock: "stubOnlyName",
-    stampTitle: "magentaBar",
-    stubHRatio: 0.24,
+    stampTitle: "creamChip",
+    stubHRatio: 0.2,
   },
 ] as const;
 

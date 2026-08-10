@@ -1,6 +1,7 @@
 import { JPEG_QUALITY } from "./compose";
 import { pickBuilderTitle } from "./builder-titles";
-import { GOA_DEST_IATA, type IndiaAirport } from "./india-airports";
+import type { IndiaAirport } from "./india-airports";
+import { drawIataBarcodeStrip, drawRouteMotif } from "./route-motifs";
 import { BRAND, ID_THEMES, type IdTheme } from "./style-kit";
 
 export const ID_WIDTH = 1080;
@@ -51,13 +52,11 @@ function coverRect(
   const scale = Math.max(w / source.width, h / source.height);
   const dw = source.width * scale;
   const dh = source.height * scale;
-  const dx = x + (w - dw) / 2;
-  const dy = y + (h - dh) / 2;
   ctx.save();
   ctx.beginPath();
   ctx.rect(x, y, w, h);
   ctx.clip();
-  ctx.drawImage(source, dx, dy, dw, dh);
+  ctx.drawImage(source, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
   ctx.restore();
 }
 
@@ -106,150 +105,6 @@ function drawCornerTicks(
   }
 }
 
-function drawMechaPalm(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  scale = 1,
-  color: string = CREAM,
-) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
-  ctx.fillStyle = color;
-  ctx.strokeStyle = color;
-  ctx.lineCap = "square";
-  ctx.lineJoin = "miter";
-
-  ctx.beginPath();
-  const pts = [
-    [0, -28],
-    [6, -10],
-    [24, -10],
-    [10, 2],
-    [16, 20],
-    [0, 10],
-    [-16, 20],
-    [-10, 2],
-    [-24, -10],
-    [-6, -10],
-  ];
-  for (let i = 0; i < pts.length; i++) {
-    const [px, py] = pts[i]!;
-    if (i === 0) ctx.moveTo(px + 34, py - 8);
-    else ctx.lineTo(px + 34, py - 8);
-  }
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillRect(-40, 22, 78, 12);
-
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.moveTo(-8, 22);
-  ctx.lineTo(-14, -8);
-  ctx.lineTo(-6, -40);
-  ctx.stroke();
-
-  ctx.lineWidth = 5;
-  for (const [ax, ay] of [
-    [-48, -28],
-    [-30, -52],
-    [2, -56],
-    [28, -44],
-    [40, -22],
-  ] as const) {
-    ctx.beginPath();
-    ctx.moveTo(-6, -38);
-    ctx.lineTo(ax, ay);
-    ctx.stroke();
-  }
-
-  ctx.restore();
-}
-
-function drawRouteGraphic(
-  ctx: CanvasRenderingContext2D,
-  originIata: string,
-  x: number,
-  y: number,
-  w: number,
-  style: IdTheme["routeStyle"],
-) {
-  const startX = x + 8;
-  const endX = x + w - 72;
-  const baseY = y + 42;
-  const midX = (startX + endX) / 2;
-  const peakY = y + 8;
-
-  const ink = style === "dashedCream" ? CREAM : style === "minimalIata" ? YELLOW : CREAM;
-  const pathColor = style === "dashedCream" ? CREAM : YELLOW;
-
-  ctx.fillStyle = ink;
-  ctx.font = `700 28px ui-monospace, SFMono-Regular, Menlo, monospace`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(originIata, startX, baseY);
-
-  if (style === "minimalIata") {
-    ctx.fillStyle = MAGENTA;
-    ctx.font = `700 18px "DM Sans", system-ui, sans-serif`;
-    ctx.fillText("→", midX - 10, baseY);
-    ctx.fillStyle = ink;
-    ctx.font = `700 28px ui-monospace, SFMono-Regular, Menlo, monospace`;
-    ctx.textAlign = "right";
-    ctx.fillText(GOA_DEST_IATA, endX + 64, baseY);
-    return;
-  }
-
-  ctx.strokeStyle = pathColor;
-  ctx.lineWidth = 3;
-  ctx.lineCap = "square";
-  ctx.lineJoin = "miter";
-  ctx.setLineDash(style === "dashedCream" ? [4, 8] : [8, 6]);
-  ctx.beginPath();
-  ctx.moveTo(startX + 58, baseY - 4);
-  ctx.lineTo(midX - 24, peakY + 20);
-  ctx.lineTo(midX, peakY);
-  ctx.lineTo(midX + 24, peakY + 20);
-  ctx.lineTo(endX - 8, baseY - 4);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  ctx.fillStyle = pathColor;
-  ctx.beginPath();
-  ctx.moveTo(midX + 10, peakY + 2);
-  ctx.lineTo(midX - 8, peakY - 6);
-  ctx.lineTo(midX - 2, peakY + 2);
-  ctx.lineTo(midX - 8, peakY + 12);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = ink;
-  ctx.font = `700 28px ui-monospace, SFMono-Regular, Menlo, monospace`;
-  ctx.textAlign = "right";
-  ctx.fillText(GOA_DEST_IATA, endX + 64, baseY);
-
-  drawMechaPalm(ctx, endX + 28, y + 8, 0.55, ink);
-}
-
-function drawPerforation(
-  ctx: CanvasRenderingContext2D,
-  y: number,
-  left: number,
-  right: number,
-  dense: boolean,
-) {
-  const step = dense ? 16 : 22;
-  const r = dense ? 5 : 7;
-  ctx.fillStyle = GREEN_DEEP;
-  for (let x = left + 18; x < right - 10; x += step) {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
 function drawHalftoneDots(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -257,12 +112,11 @@ function drawHalftoneDots(
   w: number,
   h: number,
 ) {
-  ctx.fillStyle = "rgba(11,77,44,0.1)";
+  ctx.fillStyle = "rgba(11,77,44,0.12)";
   for (let row = 0; row < h; row += 12) {
     for (let col = 0; col < w; col += 12) {
-      const r = (row + col) % 24 === 0 ? 1.5 : 0.9;
       ctx.beginPath();
-      ctx.arc(x + col + 2, y + row + 2, r, 0, Math.PI * 2);
+      ctx.arc(x + col + 2, y + row + 2, (row + col) % 24 === 0 ? 1.5 : 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -278,12 +132,7 @@ function canvasToJpeg(canvas: HTMLCanvasElement): Promise<Blob> {
   });
 }
 
-function drawAccentRail(
-  ctx: CanvasRenderingContext2D,
-  theme: IdTheme,
-  y: number,
-  h = 6,
-) {
+function drawAccentRail(ctx: CanvasRenderingContext2D, theme: IdTheme, y: number, h = 6) {
   switch (theme.accentRail) {
     case "magenta":
       ctx.fillStyle = MAGENTA;
@@ -321,84 +170,213 @@ function stubFill(stub: IdTheme["stub"]): string {
   }
 }
 
-export async function composeBuilderId(input: ComposeIdInput): Promise<{
-  blob: Blob;
-  title: string;
-}> {
-  const theme = input.theme ?? ID_THEMES[0]!;
-  const { photo, name, role, serial, origin } = input;
-  const title = pickBuilderTitle(name, serial);
-  const displayName = name.trim().toUpperCase() || "BUILDER";
-  const displayRole = role.trim().toUpperCase() || "BUILDER";
+function drawPerforation(ctx: CanvasRenderingContext2D, y: number) {
+  ctx.fillStyle = GREEN_DEEP;
+  for (let x = 18; x < ID_WIDTH - 10; x += 20) {
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
 
-  const wordmark =
-    theme.titleMark === "wordmarkSVG" ? await loadWordmark() : null;
+function drawTitleStamp(
+  ctx: CanvasRenderingContext2D,
+  theme: IdTheme,
+  title: string,
+  x: number,
+  y: number,
+) {
+  ctx.font = `700 26px "DM Sans", system-ui, sans-serif`;
+  const stampW = Math.min(ID_WIDTH - 80, ctx.measureText(title).width + 36);
+  const stampH = 48;
+  switch (theme.stampTitle) {
+    case "magentaBar":
+      ctx.fillStyle = MAGENTA;
+      ctx.fillRect(x, y, stampW, stampH);
+      ctx.strokeStyle = BLACK;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, stampW, stampH);
+      ctx.fillStyle = CREAM;
+      break;
+    case "yellowOutline":
+      ctx.strokeStyle = YELLOW;
+      ctx.lineWidth = 5;
+      ctx.strokeRect(x, y, stampW, stampH);
+      ctx.fillStyle = YELLOW;
+      break;
+    case "creamChip":
+      ctx.fillStyle = CREAM;
+      ctx.fillRect(x, y, stampW, stampH);
+      ctx.strokeStyle = BLACK;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, stampW, stampH);
+      ctx.fillStyle = GREEN;
+      break;
+    case "flapCell":
+      ctx.fillStyle = GREEN_DEEP;
+      ctx.fillRect(x, y, stampW, stampH);
+      ctx.fillStyle = MAGENTA;
+      ctx.fillRect(x, y + stampH / 2 - 1, stampW, 2);
+      ctx.strokeStyle = BLACK;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x, y, stampW, stampH);
+      ctx.fillStyle = YELLOW;
+      break;
+    default: {
+      const _e: never = theme.stampTitle;
+      void _e;
+      ctx.fillStyle = CREAM;
+    }
+  }
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(title, x + stampW / 2, y + stampH / 2 + 1);
+}
 
-  const canvas = document.createElement("canvas");
-  canvas.width = ID_WIDTH;
-  canvas.height = ID_HEIGHT;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2D canvas unavailable");
+function drawStub(
+  ctx: CanvasRenderingContext2D,
+  theme: IdTheme,
+  stubY: number,
+  stubH: number,
+  serial: string,
+  displayName: string,
+  displayRole: string,
+) {
+  ctx.fillStyle = stubFill(theme.stub);
+  ctx.fillRect(0, stubY, ID_WIDTH, stubH);
+  if (theme.stub === "paper") drawHalftoneDots(ctx, 0, stubY, ID_WIDTH, stubH);
+  drawAccentRail(ctx, theme, stubY, theme.accentRail === "dual" ? 5 : 6);
+  drawPerforation(ctx, stubY + 2);
 
+  const notch = theme.stub === "magenta" ? "#C41860" : GREEN_DEEP;
+  ctx.fillStyle = notch;
+  ctx.beginPath();
+  ctx.arc(0, stubY + stubH / 2, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(ID_WIDTH, stubY + stubH / 2, 22, 0, Math.PI * 2);
+  ctx.fill();
+
+  const mid = stubY + stubH / 2;
+  const ink = theme.stub === "paper" ? INK : CREAM;
+  const muted = theme.stub === "paper" ? GREEN : YELLOW;
+
+  if (theme.nameBlock === "stubOnlyName") {
+    ctx.fillStyle = ink;
+    ctx.font = `700 30px "Archivo Black", Impact, sans-serif`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(displayName.slice(0, 18), 48, mid - 24);
+    ctx.fillStyle = muted;
+    ctx.font = `700 15px "DM Sans", system-ui, sans-serif`;
+    ctx.fillText(displayRole.slice(0, 28), 48, mid + 8);
+    ctx.fillStyle = ink;
+    ctx.font = `700 22px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    ctx.textAlign = "right";
+    ctx.fillText(serial, ID_WIDTH - 48, mid + 24);
+    return;
+  }
+
+  ctx.fillStyle = muted;
+  ctx.font = `700 16px "DM Sans", system-ui, sans-serif`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("HACKER HOUSE GOA", 48, mid - 28);
+  ctx.fillStyle = ink;
+  ctx.font = `700 14px "DM Sans", system-ui, sans-serif`;
+  ctx.fillText("OCT 28–31  ·  2026", 48, mid - 6);
+  ctx.font = `700 26px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  ctx.textAlign = "center";
+  ctx.fillText(serial, ID_WIDTH / 2, mid + 26);
+  ctx.fillStyle = theme.stub === "magenta" ? YELLOW : MAGENTA;
+  ctx.font = `700 14px "DM Sans", system-ui, sans-serif`;
+  ctx.textAlign = "right";
+  ctx.fillText("GOI · #FrameInGoa", ID_WIDTH - 48, mid + 8);
+}
+
+function photoWash(
+  ctx: CanvasRenderingContext2D,
+  theme: IdTheme,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  if (theme.photoTreatment === "clean") {
+    const fade = ctx.createLinearGradient(0, y + h * 0.4, 0, y + h);
+    fade.addColorStop(0, "rgba(8,56,33,0)");
+    fade.addColorStop(1, "rgba(8,56,33,0.85)");
+    ctx.fillStyle = fade;
+    ctx.fillRect(x, y, w, h);
+  } else if (theme.photoTreatment === "greenWash") {
+    ctx.fillStyle = "rgba(8,56,33,0.35)";
+    ctx.fillRect(x, y, w, h);
+    const fade = ctx.createLinearGradient(0, y + h * 0.3, 0, y + h);
+    fade.addColorStop(0, "rgba(8,56,33,0)");
+    fade.addColorStop(1, "rgba(8,56,33,0.9)");
+    ctx.fillStyle = fade;
+    ctx.fillRect(x, y, w, h);
+  } else if (theme.photoTreatment === "halftoneEdge") {
+    const band = Math.min(140, h * 0.28);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y + h - band, w, band);
+    ctx.clip();
+    drawHalftoneDots(ctx, x, y + h - band, w, band);
+    ctx.fillStyle = "rgba(8,56,33,0.55)";
+    ctx.fillRect(x, y + h - band, w, band);
+    ctx.restore();
+  }
+}
+
+function drawNameRole(
+  ctx: CanvasRenderingContext2D,
+  displayName: string,
+  displayRole: string,
+  x: number,
+  nameY: number,
+  roleY: number,
+  maxW: number,
+  align: CanvasTextAlign = "left",
+  nameColor: string = CREAM,
+) {
+  ctx.textAlign = align;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = nameColor;
+  const ns = fitText(ctx, displayName, maxW, 76, 36, `"Archivo Black", Impact, sans-serif`);
+  ctx.font = `700 ${ns}px "Archivo Black", Impact, sans-serif`;
+  ctx.fillText(displayName, x, nameY);
+  ctx.fillStyle = MAGENTA;
+  const rs = fitText(ctx, displayRole, maxW, 34, 18, `"DM Sans", system-ui, sans-serif`);
+  ctx.font = `700 ${rs}px "DM Sans", system-ui, sans-serif`;
+  ctx.fillText(displayRole, x, roleY);
+}
+
+async function drawPosterStub(
+  ctx: CanvasRenderingContext2D,
+  input: ComposeIdInput,
+  theme: IdTheme,
+  title: string,
+  displayName: string,
+  displayRole: string,
+) {
   const stubH = Math.round(ID_HEIGHT * theme.stubHRatio);
   const bodyH = ID_HEIGHT - stubH;
-  const bannerH = theme.layout === "bannerTop" ? 110 : 0;
 
   ctx.fillStyle = GREEN_DEEP;
   ctx.fillRect(0, 0, ID_WIDTH, bodyH);
-  coverRect(ctx, photo, 0, bannerH, ID_WIDTH, bodyH - bannerH);
+  coverRect(ctx, input.photo, 0, 0, ID_WIDTH, bodyH);
+  photoWash(ctx, theme, 0, 0, ID_WIDTH, bodyH);
 
-  if (theme.photoTreatment === "greenWash" || theme.photoTreatment === "clean") {
-    const fade = ctx.createLinearGradient(0, bodyH * 0.35, 0, bodyH);
-    fade.addColorStop(0, "rgba(8,56,33,0)");
-    fade.addColorStop(0.45, "rgba(8,56,33,0.35)");
-    fade.addColorStop(1, "rgba(8,56,33,0.88)");
-    ctx.fillStyle = fade;
-    ctx.fillRect(0, bannerH, ID_WIDTH, bodyH - bannerH);
-  }
+  ctx.strokeStyle = GREEN;
+  ctx.lineWidth = 16;
+  ctx.strokeRect(8, 8, ID_WIDTH - 16, bodyH - 16);
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 4;
+  ctx.strokeRect(20, 20, ID_WIDTH - 40, bodyH - 40);
+  drawCornerTicks(ctx, 28, 28, ID_WIDTH - 56, bodyH - 56);
 
-  if (theme.photoTreatment === "halftoneEdge") {
-    ctx.save();
-    const band = 120;
-    ctx.beginPath();
-    ctx.rect(0, bodyH - band, ID_WIDTH, band);
-    ctx.clip();
-    drawHalftoneDots(ctx, 0, bodyH - band, ID_WIDTH, band);
-    ctx.fillStyle = "rgba(8,56,33,0.55)";
-    ctx.fillRect(0, bodyH - band, ID_WIDTH, band);
-    ctx.restore();
-  }
-
-  if (theme.layout === "bannerTop") {
-    ctx.fillStyle = GREEN;
-    ctx.fillRect(0, 0, ID_WIDTH, bannerH);
-    drawAccentRail(ctx, theme, bannerH - 6, 3);
-    if (wordmark) {
-      const mw = 200;
-      const mh = (mw * wordmark.naturalHeight) / wordmark.naturalWidth;
-      ctx.drawImage(wordmark, 36, (bannerH - mh) / 2, mw, mh);
-    } else {
-      ctx.fillStyle = YELLOW;
-      ctx.font = `700 28px "Archivo Black", Impact, sans-serif`;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillText("HACKER HOUSE GOA", 40, bannerH / 2);
-    }
-  } else {
-    ctx.strokeStyle = GREEN;
-    ctx.lineWidth = 16;
-    ctx.strokeRect(8, 8, ID_WIDTH - 16, bodyH - 16);
-    ctx.strokeStyle = YELLOW;
-    ctx.lineWidth = 4;
-    ctx.strokeRect(20, 20, ID_WIDTH - 40, bodyH - 40);
-    drawCornerTicks(ctx, 28, 28, ID_WIDTH - 56, bodyH - 56);
-  }
-
-  if (theme.titleMark === "wordmarkSVG" && wordmark && theme.layout !== "bannerTop") {
-    const mw = 240;
-    const mh = (mw * wordmark.naturalHeight) / wordmark.naturalWidth;
-    ctx.drawImage(wordmark, 40, 36, mw, mh);
-  } else if (theme.titleMark === "textChip") {
+  if (theme.titleMark === "textChip") {
     ctx.fillStyle = GREEN;
     ctx.fillRect(40, 40, 280, 44);
     ctx.strokeStyle = BLACK;
@@ -411,153 +389,301 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
     ctx.fillText("HH GOA 2026", 56, 62);
   }
 
-  const routeY =
-    theme.layout === "bannerTop" ? bannerH + 24 : bodyH * 0.42;
-  drawRouteGraphic(ctx, origin.iata, 40, routeY, 420, theme.routeStyle);
+  drawRouteMotif(ctx, {
+    origin: input.origin,
+    x: 40,
+    y: 110,
+    w: ID_WIDTH - 80,
+    h: 88,
+    motif: theme.routeMotif,
+  });
 
-  const typeMax = ID_WIDTH - 80;
-  const showNameOnBody = theme.nameBlock !== "stubOnlyName";
+  drawNameRole(ctx, displayName, displayRole, 40, bodyH - 150, bodyH - 108, ID_WIDTH - 80);
+  drawTitleStamp(ctx, theme, title, 40, bodyH - 88);
+  drawStub(ctx, theme, bodyH, stubH, input.serial, displayName, displayRole);
+}
 
-  if (showNameOnBody) {
-    const nameX = theme.nameBlock === "centerStack" ? ID_WIDTH / 2 : 40;
-    const align = theme.nameBlock === "centerStack" ? "center" : "left";
-    ctx.textAlign = align;
-    ctx.textBaseline = "alphabetic";
+async function drawBoardingPass(
+  ctx: CanvasRenderingContext2D,
+  input: ComposeIdInput,
+  theme: IdTheme,
+  title: string,
+  displayName: string,
+  displayRole: string,
+) {
+  const stubH = Math.round(ID_HEIGHT * theme.stubHRatio);
+  const bodyH = ID_HEIGHT - stubH;
+  const photoW = Math.round(ID_WIDTH * 0.38);
 
-    ctx.fillStyle = theme.stub === "magenta" ? YELLOW : CREAM;
-    const nameSize = fitText(
-      ctx,
-      displayName,
-      typeMax,
-      theme.nameBlock === "centerStack" ? 64 : 72,
-      36,
-      `"Archivo Black", Impact, sans-serif`,
-    );
-    ctx.font = `700 ${nameSize}px "Archivo Black", Impact, sans-serif`;
-    ctx.fillText(displayName, nameX, bodyH - 150);
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, ID_WIDTH, bodyH);
+  drawHalftoneDots(ctx, photoW, 0, ID_WIDTH - photoW, bodyH);
 
+  coverRect(ctx, input.photo, 0, 0, photoW, bodyH);
+  ctx.strokeStyle = BLACK;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(0, 0, photoW, bodyH);
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 4;
+  ctx.strokeRect(8, 8, photoW - 16, bodyH - 16);
+
+  const rightX = photoW + 28;
+  const rightW = ID_WIDTH - photoW - 56;
+
+  ctx.fillStyle = GREEN;
+  ctx.fillRect(photoW, 0, ID_WIDTH - photoW, 64);
+  ctx.fillStyle = YELLOW;
+  ctx.font = `700 22px "Archivo Black", Impact, sans-serif`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("BOARDING PASS  ·  HH GOA 2026", rightX, 32);
+
+  drawRouteMotif(ctx, {
+    origin: input.origin,
+    x: rightX,
+    y: 90,
+    w: rightW,
+    h: 96,
+    motif: "boardingStrip",
+  });
+
+  drawNameRole(ctx, displayName, displayRole, rightX, 280, 330, rightW, "left", GREEN);
+  drawTitleStamp(ctx, theme, title, rightX, 360);
+
+  ctx.fillStyle = INK;
+  ctx.font = `700 14px "DM Sans", system-ui, sans-serif`;
+  ctx.fillText("OCT 28–31 2026  ·  GOI", rightX, bodyH - 40);
+
+  drawStub(ctx, theme, bodyH, stubH, input.serial, displayName, displayRole);
+}
+
+async function drawManifest(
+  ctx: CanvasRenderingContext2D,
+  input: ComposeIdInput,
+  theme: IdTheme,
+  title: string,
+  displayName: string,
+  displayRole: string,
+) {
+  const stubH = Math.round(ID_HEIGHT * theme.stubHRatio);
+  const bodyH = ID_HEIGHT - stubH;
+
+  ctx.fillStyle = GREEN_DEEP;
+  ctx.fillRect(0, 0, ID_WIDTH, bodyH);
+  coverRect(ctx, input.photo, 0, 0, ID_WIDTH, bodyH);
+  photoWash(ctx, theme, 0, 0, ID_WIDTH, bodyH);
+
+  drawRouteMotif(ctx, {
+    origin: input.origin,
+    x: 0,
+    y: bodyH * 0.52,
+    w: ID_WIDTH,
+    h: 180,
+    motif: "tapeSlash",
+  });
+
+  drawNameRole(ctx, displayName, displayRole, 40, bodyH - 160, bodyH - 118, ID_WIDTH - 80);
+  drawTitleStamp(ctx, theme, title, 40, bodyH - 96);
+  drawStub(ctx, theme, bodyH, stubH, input.serial, displayName, displayRole);
+}
+
+async function drawArrivalGate(
+  ctx: CanvasRenderingContext2D,
+  input: ComposeIdInput,
+  theme: IdTheme,
+  title: string,
+  displayName: string,
+  displayRole: string,
+  wordmark: HTMLImageElement | null,
+) {
+  const stubH = Math.round(ID_HEIGHT * theme.stubHRatio);
+  const bodyH = ID_HEIGHT - stubH;
+  const bannerH = 120;
+
+  ctx.fillStyle = GREEN;
+  ctx.fillRect(0, 0, ID_WIDTH, bannerH);
+  drawAccentRail(ctx, theme, bannerH - 6, 3);
+  if (wordmark) {
+    const mw = 220;
+    const mh = (mw * wordmark.naturalHeight) / wordmark.naturalWidth;
+    ctx.drawImage(wordmark, 36, (bannerH - mh) / 2, mw, mh);
+  } else {
+    ctx.fillStyle = YELLOW;
+    ctx.font = `700 28px "Archivo Black", Impact, sans-serif`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText("HACKER HOUSE GOA", 40, bannerH / 2);
+  }
+  ctx.fillStyle = CREAM;
+  ctx.font = `700 16px "DM Sans", system-ui, sans-serif`;
+  ctx.textAlign = "right";
+  ctx.fillText("GATE A1", ID_WIDTH - 40, bannerH / 2);
+
+  coverRect(ctx, input.photo, 0, bannerH, ID_WIDTH, bodyH - bannerH - 160);
+  photoWash(ctx, theme, 0, bannerH, ID_WIDTH, bodyH - bannerH - 160);
+
+  drawRouteMotif(ctx, {
+    origin: input.origin,
+    x: 48,
+    y: bodyH - 250,
+    w: ID_WIDTH - 96,
+    h: 100,
+    motif: "splitFlap",
+  });
+
+  drawNameRole(ctx, displayName, displayRole, 48, bodyH - 120, bodyH - 78, ID_WIDTH - 96);
+  drawTitleStamp(ctx, theme, title, 48, bodyH - 56);
+  drawStub(ctx, theme, bodyH, stubH, input.serial, displayName, displayRole);
+}
+
+async function drawLanyard(
+  ctx: CanvasRenderingContext2D,
+  input: ComposeIdInput,
+  theme: IdTheme,
+  title: string,
+  displayName: string,
+  displayRole: string,
+) {
+  const stubH = Math.round(ID_HEIGHT * theme.stubHRatio);
+  const bodyH = ID_HEIGHT - stubH;
+  const photoH = Math.round(bodyH * 0.55);
+
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, ID_WIDTH, bodyH);
+  drawHalftoneDots(ctx, 0, 0, ID_WIDTH, bodyH);
+
+  // Lanyard hole
+  ctx.fillStyle = GREEN_DEEP;
+  ctx.beginPath();
+  ctx.arc(ID_WIDTH / 2, 36, 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  const px = 48;
+  const py = 64;
+  const pw = ID_WIDTH - 96;
+  coverRect(ctx, input.photo, px, py, pw, photoH - py);
+  ctx.strokeStyle = BLACK;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(px, py, pw, photoH - py);
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 4;
+  ctx.strokeRect(px + 8, py + 8, pw - 16, photoH - py - 16);
+
+  if (theme.titleMark === "textChip") {
     ctx.fillStyle = MAGENTA;
-    const roleSize = fitText(
-      ctx,
-      displayRole,
-      typeMax,
-      36,
-      20,
-      `"DM Sans", system-ui, sans-serif`,
-    );
-    ctx.font = `700 ${roleSize}px "DM Sans", system-ui, sans-serif`;
-    ctx.fillText(displayRole, nameX, bodyH - 108);
+    ctx.fillRect(px, py + 12, 160, 36);
+    ctx.fillStyle = CREAM;
+    ctx.font = `700 16px "DM Sans", system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("BUILDER", px + 80, py + 30);
   }
 
-  // Witty title stamp
-  ctx.font = `700 26px "DM Sans", system-ui, sans-serif`;
-  const stampPadX = 18;
-  const stampW = Math.min(typeMax, ctx.measureText(title).width + stampPadX * 2);
-  const stampH = 48;
-  const stampX =
-    theme.nameBlock === "centerStack" ? (ID_WIDTH - stampW) / 2 : 40;
-  const stampY = bodyH - 88;
+  const stackY = photoH + 36;
+  drawNameRole(ctx, displayName, displayRole, 56, stackY + 50, stackY + 100, ID_WIDTH - 112, "left", GREEN);
+  drawTitleStamp(ctx, theme, title, 56, stackY + 120);
 
-  switch (theme.stampTitle) {
-    case "magentaBar":
-      ctx.fillStyle = MAGENTA;
-      ctx.fillRect(stampX, stampY, stampW, stampH);
-      ctx.strokeStyle = BLACK;
-      ctx.lineWidth = 3;
-      ctx.strokeRect(stampX, stampY, stampW, stampH);
-      ctx.fillStyle = CREAM;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(title, stampX + stampW / 2, stampY + stampH / 2 + 1);
+  drawRouteMotif(ctx, {
+    origin: input.origin,
+    x: 56,
+    y: stackY + 190,
+    w: ID_WIDTH - 112,
+    h: 100,
+    motif: "radarHop",
+  });
+
+  drawIataBarcodeStrip(ctx, input.origin, 40, bodyH - 48, ID_WIDTH - 80);
+  drawStub(ctx, theme, bodyH, stubH, input.serial, displayName, displayRole);
+}
+
+async function drawCoastline(
+  ctx: CanvasRenderingContext2D,
+  input: ComposeIdInput,
+  theme: IdTheme,
+  title: string,
+  displayName: string,
+  displayRole: string,
+) {
+  const stubH = Math.round(ID_HEIGHT * theme.stubHRatio);
+  const bodyH = ID_HEIGHT - stubH;
+
+  ctx.fillStyle = GREEN_DEEP;
+  ctx.fillRect(0, 0, ID_WIDTH, bodyH);
+  coverRect(ctx, input.photo, 0, 0, ID_WIDTH, bodyH);
+
+  // Shoreline wave + halftone
+  const shoreY = bodyH - 280;
+  ctx.fillStyle = "rgba(8,56,33,0.55)";
+  ctx.beginPath();
+  ctx.moveTo(0, shoreY + 40);
+  for (let x = 0; x <= ID_WIDTH; x += 40) {
+    ctx.quadraticCurveTo(x + 20, shoreY + (x % 80 === 0 ? -20 : 30), x + 40, shoreY + 40);
+  }
+  ctx.lineTo(ID_WIDTH, bodyH);
+  ctx.lineTo(0, bodyH);
+  ctx.closePath();
+  ctx.fill();
+  drawHalftoneDots(ctx, 0, shoreY, ID_WIDTH, bodyH - shoreY);
+
+  drawRouteMotif(ctx, {
+    origin: input.origin,
+    x: 40,
+    y: shoreY - 20,
+    w: ID_WIDTH - 80,
+    h: 120,
+    motif: "coastCrest",
+  });
+
+  drawTitleStamp(ctx, theme, title, 40, shoreY - 80);
+  drawStub(ctx, theme, bodyH, stubH, input.serial, displayName, displayRole);
+  // name lives on stub for coastline
+  void displayRole;
+}
+
+export async function composeBuilderId(input: ComposeIdInput): Promise<{
+  blob: Blob;
+  title: string;
+}> {
+  const theme = input.theme ?? ID_THEMES[0]!;
+  const title = pickBuilderTitle(input.name, input.serial);
+  const displayName = input.name.trim().toUpperCase() || "BUILDER";
+  const displayRole = input.role.trim().toUpperCase() || "BUILDER";
+
+  const wordmark =
+    theme.titleMark === "wordmarkSVG" ? await loadWordmark() : null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = ID_WIDTH;
+  canvas.height = ID_HEIGHT;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2D canvas unavailable");
+
+  switch (theme.layout) {
+    case "posterStub":
+      await drawPosterStub(ctx, input, theme, title, displayName, displayRole);
       break;
-    case "yellowOutline":
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = YELLOW;
-      ctx.strokeRect(stampX, stampY, stampW, stampH);
-      ctx.fillStyle = YELLOW;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(title, stampX + stampW / 2, stampY + stampH / 2 + 1);
+    case "boardingPass":
+      await drawBoardingPass(ctx, input, theme, title, displayName, displayRole);
       break;
-    case "creamChip":
-      ctx.fillStyle = CREAM;
-      ctx.fillRect(stampX, stampY, stampW, stampH);
-      ctx.strokeStyle = BLACK;
-      ctx.lineWidth = 3;
-      ctx.strokeRect(stampX, stampY, stampW, stampH);
-      ctx.fillStyle = GREEN;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(title, stampX + stampW / 2, stampY + stampH / 2 + 1);
+    case "manifest":
+      await drawManifest(ctx, input, theme, title, displayName, displayRole);
+      break;
+    case "arrivalGate":
+      await drawArrivalGate(ctx, input, theme, title, displayName, displayRole, wordmark);
+      break;
+    case "lanyard":
+      await drawLanyard(ctx, input, theme, title, displayName, displayRole);
+      break;
+    case "coastline":
+      await drawCoastline(ctx, input, theme, title, displayName, displayRole);
       break;
     default: {
-      const _e: never = theme.stampTitle;
+      const _e: never = theme.layout;
       void _e;
     }
-  }
-
-  // Ticket stub
-  const stubY = bodyH;
-  ctx.fillStyle = stubFill(theme.stub);
-  ctx.fillRect(0, stubY, ID_WIDTH, stubH);
-  if (theme.stub === "paper") {
-    drawHalftoneDots(ctx, 0, stubY, ID_WIDTH, stubH);
-  }
-
-  drawAccentRail(ctx, theme, stubY, theme.accentRail === "dual" ? 5 : 6);
-  drawPerforation(
-    ctx,
-    stubY + 2,
-    0,
-    ID_WIDTH,
-    theme.layout === "fullBleedStubThin",
-  );
-
-  ctx.fillStyle =
-    theme.stub === "paper" ? GREEN_DEEP : notchFill(theme.stub);
-  ctx.beginPath();
-  ctx.arc(0, stubY + stubH / 2, 22, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(ID_WIDTH, stubY + stubH / 2, 22, 0, Math.PI * 2);
-  ctx.fill();
-
-  const stubMid = stubY + stubH / 2;
-  const stubInk = theme.stub === "magenta" || theme.stub === "green" ? CREAM : INK;
-  const stubMuted = theme.stub === "magenta" || theme.stub === "green" ? YELLOW : GREEN;
-
-  if (theme.nameBlock === "stubOnlyName") {
-    ctx.fillStyle = stubInk;
-    ctx.font = `700 32px "Archivo Black", Impact, sans-serif`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillText(displayName.slice(0, 18), 48, stubMid - 28);
-    ctx.fillStyle = stubMuted;
-    ctx.font = `700 16px "DM Sans", system-ui, sans-serif`;
-    ctx.fillText(displayRole.slice(0, 24), 48, stubMid + 4);
-    ctx.fillStyle = stubInk;
-    ctx.font = `700 22px ui-monospace, SFMono-Regular, Menlo, monospace`;
-    ctx.textAlign = "right";
-    ctx.fillText(serial, ID_WIDTH - 48, stubMid + 28);
-  } else {
-    ctx.fillStyle = stubMuted;
-    ctx.font = `700 18px "DM Sans", system-ui, sans-serif`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillText("HACKER HOUSE GOA", 48, stubMid - 36);
-    ctx.fillStyle = stubInk;
-    ctx.font = `700 15px "DM Sans", system-ui, sans-serif`;
-    ctx.fillText("OCT 28–31  ·  2026", 48, stubMid - 12);
-
-    ctx.fillStyle = stubInk;
-    ctx.font = `700 28px ui-monospace, SFMono-Regular, Menlo, monospace`;
-    ctx.textAlign = "center";
-    ctx.fillText(serial, ID_WIDTH / 2, stubMid + 28);
-
-    ctx.fillStyle = theme.stub === "magenta" ? YELLOW : MAGENTA;
-    ctx.font = `700 16px "DM Sans", system-ui, sans-serif`;
-    ctx.textAlign = "right";
-    ctx.fillText("GOI  ·  #FrameInGoa", ID_WIDTH - 48, stubMid + 8);
   }
 
   ctx.strokeStyle = BLACK;
@@ -565,21 +691,6 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
   ctx.strokeRect(4, 4, ID_WIDTH - 8, ID_HEIGHT - 8);
 
   return { blob: await canvasToJpeg(canvas), title };
-}
-
-function notchFill(stub: IdTheme["stub"]): string {
-  switch (stub) {
-    case "green":
-      return GREEN_DEEP;
-    case "magenta":
-      return "#C41860";
-    case "paper":
-      return GREEN_DEEP;
-    default: {
-      const _e: never = stub;
-      return _e;
-    }
-  }
 }
 
 export function blobToPassFile(blob: Blob, serial: string): File {

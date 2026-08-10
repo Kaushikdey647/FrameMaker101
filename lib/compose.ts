@@ -18,18 +18,13 @@ function coverCropDraw(
   const scale = Math.max(size / source.width, size / source.height);
   const dw = source.width * scale;
   const dh = source.height * scale;
-  const dx = (size - dw) / 2;
-  const dy = (size - dh) / 2;
-  ctx.drawImage(source, dx, dy, dw, dh);
+  ctx.drawImage(source, (size - dw) / 2, (size - dh) / 2, dw, dh);
 }
 
 function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => {
-        if (!blob) reject(new Error("canvas.toBlob failed"));
-        else resolve(blob);
-      },
+      (blob) => (blob ? resolve(blob) : reject(new Error("canvas.toBlob failed"))),
       "image/jpeg",
       JPEG_QUALITY,
     );
@@ -44,42 +39,24 @@ function drawArcText(
   radius: number,
   startAngle: number,
   endAngle: number,
-  opts: {
-    font: string;
-    fill: string;
-    stroke?: string;
-    strokeWidth?: number;
-    invert?: boolean;
-  },
+  opts: { font: string; fill: string; invert?: boolean },
 ) {
   const chars = [...text];
-  if (chars.length === 0) return;
-
+  if (!chars.length) return;
   ctx.save();
   ctx.font = opts.font;
   ctx.fillStyle = opts.fill;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  if (opts.stroke) {
-    ctx.strokeStyle = opts.stroke;
-    ctx.lineWidth = opts.strokeWidth ?? 6;
-    ctx.lineJoin = "round";
-  }
-
   const total = Math.abs(endAngle - startAngle);
   const dir = endAngle >= startAngle ? 1 : -1;
   const step = total / Math.max(chars.length - 1, 1);
-
   for (let i = 0; i < chars.length; i++) {
     const angle = startAngle + dir * step * i;
-    const x = cx + Math.cos(angle) * radius;
-    const y = cy + Math.sin(angle) * radius;
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
     ctx.rotate(angle + (opts.invert ? -Math.PI / 2 : Math.PI / 2));
-    const ch = chars[i]!;
-    if (opts.stroke) ctx.strokeText(ch, 0, 0);
-    ctx.fillText(ch, 0, 0);
+    ctx.fillText(chars[i]!, 0, 0);
     ctx.restore();
   }
   ctx.restore();
@@ -90,7 +67,7 @@ function drawDiamond(
   x: number,
   y: number,
   size: number,
-  fill: string = BLACK,
+  fill: string,
 ) {
   ctx.fillStyle = fill;
   ctx.beginPath();
@@ -102,7 +79,7 @@ function drawDiamond(
   ctx.fill();
 }
 
-function strokeColor(key: FrameTheme["innerStroke"]): string {
+function strokeOf(key: FrameTheme["innerStroke"]): string {
   switch (key) {
     case "cream":
       return CREAM;
@@ -122,24 +99,23 @@ function fillRing(
   theme: FrameTheme,
   cx: number,
   cy: number,
-  ringOuter: number,
-  ringInner: number,
+  outer: number,
+  inner: number,
 ) {
   ctx.beginPath();
-  ctx.arc(cx, cy, ringOuter, 0, Math.PI * 2);
-  ctx.arc(cx, cy, ringInner, 0, Math.PI * 2, true);
-
+  ctx.arc(cx, cy, outer, 0, Math.PI * 2);
+  ctx.arc(cx, cy, inner, 0, Math.PI * 2, true);
   switch (theme.ring) {
     case "conicBrand": {
-      const grad = ctx.createConicGradient(-Math.PI / 2, cx, cy);
-      grad.addColorStop(0, MAGENTA);
-      grad.addColorStop(0.2, "#FF4D6A");
-      grad.addColorStop(0.38, "#FF7A3D");
-      grad.addColorStop(0.55, YELLOW);
-      grad.addColorStop(0.72, "#E8B010");
-      grad.addColorStop(0.88, "#C45A2A");
-      grad.addColorStop(1, MAGENTA);
-      ctx.fillStyle = grad;
+      const g = ctx.createConicGradient(-Math.PI / 2, cx, cy);
+      g.addColorStop(0, MAGENTA);
+      g.addColorStop(0.2, "#FF4D6A");
+      g.addColorStop(0.38, "#FF7A3D");
+      g.addColorStop(0.55, YELLOW);
+      g.addColorStop(0.72, "#E8B010");
+      g.addColorStop(0.88, "#C45A2A");
+      g.addColorStop(1, MAGENTA);
+      ctx.fillStyle = g;
       break;
     }
     case "solidMagenta":
@@ -149,18 +125,17 @@ function fillRing(
       ctx.fillStyle = YELLOW;
       break;
     case "splitGreenMagenta": {
-      const grad = ctx.createConicGradient(-Math.PI / 2, cx, cy);
-      grad.addColorStop(0, GREEN);
-      grad.addColorStop(0.5, GREEN);
-      grad.addColorStop(0.5, MAGENTA);
-      grad.addColorStop(1, MAGENTA);
-      ctx.fillStyle = grad;
+      const g = ctx.createConicGradient(-Math.PI / 2, cx, cy);
+      g.addColorStop(0, GREEN);
+      g.addColorStop(0.5, GREEN);
+      g.addColorStop(0.5, MAGENTA);
+      g.addColorStop(1, MAGENTA);
+      ctx.fillStyle = g;
       break;
     }
     default: {
       const _e: never = theme.ring;
       void _e;
-      ctx.fillStyle = MAGENTA;
     }
   }
   ctx.fill();
@@ -203,21 +178,40 @@ function drawBg(ctx: CanvasRenderingContext2D, theme: FrameTheme, size: number) 
   }
 }
 
+function clipPhotoCircle(
+  ctx: CanvasRenderingContext2D,
+  photo: ImageBitmap,
+  cx: number,
+  cy: number,
+  r: number,
+  size: number,
+) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  // Cover-crop into full canvas then only circle shows
+  coverCropDraw(ctx, photo, size);
+  ctx.restore();
+}
+
 function drawStamp(
   ctx: CanvasRenderingContext2D,
   theme: FrameTheme,
   cx: number,
   cy: number,
+  size = 96,
 ) {
   ctx.save();
-  ctx.font = `900 96px "Noto Sans Devanagari", "DM Sans", system-ui, sans-serif`;
+  ctx.font = `900 ${size}px "Noto Sans Devanagari", "DM Sans", system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
-
   switch (theme.stamp) {
     case "outlineMagenta":
-      ctx.lineWidth = 16;
+      ctx.lineWidth = size * 0.16;
       ctx.strokeStyle = MAGENTA;
       ctx.strokeText("गोवा", cx, cy);
       ctx.fillStyle = YELLOW;
@@ -228,8 +222,8 @@ function drawStamp(
       ctx.fillText("गोवा", cx, cy);
       break;
     case "boxed": {
-      const w = 220;
-      const h = 88;
+      const w = size * 2.3;
+      const h = size * 0.95;
       ctx.fillStyle = MAGENTA;
       ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
       ctx.strokeStyle = BLACK;
@@ -247,49 +241,256 @@ function drawStamp(
   ctx.restore();
 }
 
-function drawOuter(
-  ctx: CanvasRenderingContext2D,
-  theme: FrameTheme,
-  size: number,
-) {
-  switch (theme.outerFrame) {
-    case "none":
-      break;
-    case "hardSquare": {
-      const pad = 28;
-      ctx.strokeStyle = BLACK;
-      ctx.lineWidth = 10;
-      ctx.strokeRect(pad, pad, size - pad * 2, size - pad * 2);
-      ctx.strokeStyle = YELLOW;
-      ctx.lineWidth = 4;
-      ctx.strokeRect(pad + 12, pad + 12, size - (pad + 12) * 2, size - (pad + 12) * 2);
-      break;
-    }
-    case "ticketNotch": {
-      ctx.fillStyle = theme.bg === "creamHalftone" ? GREEN : DEEP;
-      const r = 28;
-      for (const [x, y] of [
-        [0, size / 2],
-        [size, size / 2],
-        [size / 2, 0],
-        [size / 2, size],
-      ] as const) {
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      break;
-    }
-    default: {
-      const _e: never = theme.outerFrame;
-      void _e;
-    }
+function drawClassic(ctx: CanvasRenderingContext2D, photo: ImageBitmap, theme: FrameTheme, size: number) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const ringOuter = 520;
+  const ringInner = 400;
+  const photoR = ringInner - 6;
+  const textR = (ringOuter + ringInner) / 2;
+
+  clipPhotoCircle(ctx, photo, cx, cy, photoR, size);
+  fillRing(ctx, theme, cx, cy, ringOuter, ringInner);
+  ctx.beginPath();
+  ctx.arc(cx, cy, ringInner, 0, Math.PI * 2);
+  ctx.strokeStyle = strokeOf(theme.innerStroke);
+  ctx.lineWidth = 8;
+  ctx.stroke();
+
+  if (theme.diamonds) {
+    const d = theme.ring === "solidYellow" ? MAGENTA : BLACK;
+    drawDiamond(ctx, cx - textR, cy, 16, d);
+    drawDiamond(ctx, cx + textR, cy, 16, d);
   }
+
+  const top = theme.arcInk === "cream" ? CREAM : BLACK;
+  const bot = theme.arcInk === "black" ? BLACK : CREAM;
+  drawArcText(ctx, "HACKER HOUSE GOA", cx, cy, textR, -Math.PI * 0.82, -Math.PI * 0.18, {
+    font: `800 44px "DM Sans", system-ui, sans-serif`,
+    fill: top,
+  });
+  drawArcText(ctx, "OCT 28-31  •  2026", cx, cy, textR, Math.PI * 0.22, Math.PI * 0.78, {
+    font: `800 36px "DM Sans", system-ui, sans-serif`,
+    fill: bot,
+    invert: true,
+  });
+  drawStamp(ctx, theme, cx, cy + photoR * 0.48);
 }
 
-/**
- * Circular badge frame parameterized by FrameTheme.
- */
+function drawSunburst(ctx: CanvasRenderingContext2D, photo: ImageBitmap, theme: FrameTheme, size: number) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const ringOuter = 500;
+  const ringInner = 390;
+  const photoR = ringInner - 6;
+
+  clipPhotoCircle(ctx, photo, cx, cy, photoR, size);
+  fillRing(ctx, theme, cx, cy, ringOuter, ringInner);
+  ctx.beginPath();
+  ctx.arc(cx, cy, ringInner, 0, Math.PI * 2);
+  ctx.strokeStyle = strokeOf(theme.innerStroke);
+  ctx.lineWidth = 8;
+  ctx.stroke();
+
+  // Radial ticks
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 5;
+  ctx.lineCap = "square";
+  for (let i = 0; i < 36; i++) {
+    const a = (i / 36) * Math.PI * 2 - Math.PI / 2;
+    const len = i % 3 === 0 ? 36 : 18;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * (ringOuter + 6), cy + Math.sin(a) * (ringOuter + 6));
+    ctx.lineTo(cx + Math.cos(a) * (ringOuter + 6 + len), cy + Math.sin(a) * (ringOuter + 6 + len));
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = CREAM;
+  ctx.font = `800 28px "DM Sans", system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText("HACKER HOUSE GOA", cx, 70);
+  ctx.fillText("OCT 28–31 · 2026", cx, size - 56);
+  drawStamp(ctx, theme, cx, cy + photoR * 0.5);
+}
+
+function drawStadium(ctx: CanvasRenderingContext2D, photo: ImageBitmap, theme: FrameTheme, size: number) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const ringOuter = 510;
+  const ringInner = 400;
+  const photoR = ringInner - 6;
+
+  clipPhotoCircle(ctx, photo, cx, cy, photoR, size);
+  fillRing(ctx, theme, cx, cy, ringOuter, ringInner);
+  ctx.beginPath();
+  ctx.arc(cx, cy, ringInner, 0, Math.PI * 2);
+  ctx.strokeStyle = strokeOf(theme.innerStroke);
+  ctx.lineWidth = 8;
+  ctx.stroke();
+
+  // Ribbon bands cutting across ring
+  const bandH = 70;
+  ctx.fillStyle = MAGENTA;
+  ctx.fillRect(40, 120, size - 80, bandH);
+  ctx.strokeStyle = BLACK;
+  ctx.lineWidth = 4;
+  ctx.strokeRect(40, 120, size - 80, bandH);
+  ctx.fillStyle = CREAM;
+  ctx.font = `900 34px "Archivo Black", Impact, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("HACKER HOUSE GOA", cx, 120 + bandH / 2);
+
+  ctx.fillStyle = YELLOW;
+  ctx.fillRect(80, size - 190, size - 160, bandH - 10);
+  ctx.strokeStyle = BLACK;
+  ctx.strokeRect(80, size - 190, size - 160, bandH - 10);
+  ctx.fillStyle = BLACK;
+  ctx.font = `800 28px "DM Sans", system-ui, sans-serif`;
+  ctx.fillText("OCT 28–31  ·  2026", cx, size - 190 + (bandH - 10) / 2);
+
+  drawStamp(ctx, theme, cx, cy + photoR * 0.42, 84);
+}
+
+function drawInset(ctx: CanvasRenderingContext2D, photo: ImageBitmap, theme: FrameTheme, size: number) {
+  const pad = 48;
+  ctx.fillStyle = CREAM;
+  ctx.fillRect(pad, pad, size - pad * 2, size - pad * 2);
+  ctx.strokeStyle = BLACK;
+  ctx.lineWidth = 10;
+  ctx.strokeRect(pad, pad, size - pad * 2, size - pad * 2);
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 4;
+  ctx.strokeRect(pad + 14, pad + 14, size - (pad + 14) * 2, size - (pad + 14) * 2);
+
+  // Corner chips
+  const chip = (tx: number, ty: number, label: string, bg: string) => {
+    ctx.fillStyle = bg;
+    ctx.fillRect(tx, ty, 120, 36);
+    ctx.strokeStyle = BLACK;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(tx, ty, 120, 36);
+    ctx.fillStyle = bg === YELLOW ? BLACK : CREAM;
+    ctx.font = `700 14px "DM Sans", system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, tx + 60, ty + 18);
+  };
+  chip(pad + 28, pad + 28, "HH GOA", MAGENTA);
+  chip(size - pad - 148, pad + 28, "2026", YELLOW);
+  chip(pad + 28, size - pad - 64, "OCT 28–31", GREEN);
+  chip(size - pad - 148, size - pad - 64, "#FrameInGoa", MAGENTA);
+
+  const cx = size / 2;
+  const cy = size / 2;
+  const ringOuter = 380;
+  const ringInner = 300;
+  const photoR = ringInner - 4;
+  clipPhotoCircle(ctx, photo, cx, cy, photoR, size);
+  fillRing(ctx, theme, cx, cy, ringOuter, ringInner);
+  ctx.beginPath();
+  ctx.arc(cx, cy, ringInner, 0, Math.PI * 2);
+  ctx.strokeStyle = strokeOf(theme.innerStroke);
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  if (theme.diamonds) {
+    drawDiamond(ctx, cx - (ringOuter + ringInner) / 2, cy, 12, BLACK);
+    drawDiamond(ctx, cx + (ringOuter + ringInner) / 2, cy, 12, BLACK);
+  }
+  drawStamp(ctx, theme, cx, cy + photoR * 0.5, 72);
+}
+
+function drawOrbit(ctx: CanvasRenderingContext2D, photo: ImageBitmap, theme: FrameTheme, size: number) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const outer = 530;
+  const mid = 470;
+  const inner = 390;
+  const photoR = inner - 6;
+
+  clipPhotoCircle(ctx, photo, cx, cy, photoR, size);
+
+  // Outer thin magenta ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, outer, 0, Math.PI * 2);
+  ctx.arc(cx, cy, mid, 0, Math.PI * 2, true);
+  ctx.fillStyle = MAGENTA;
+  ctx.fill();
+
+  // Inner thick yellow
+  ctx.beginPath();
+  ctx.arc(cx, cy, mid - 4, 0, Math.PI * 2);
+  ctx.arc(cx, cy, inner, 0, Math.PI * 2, true);
+  ctx.fillStyle = YELLOW;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+  ctx.strokeStyle = strokeOf(theme.innerStroke);
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Orbit nodes
+  const r = (outer + mid) / 2;
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+    drawDiamond(ctx, cx + Math.cos(a) * r, cy + Math.sin(a) * r, 10, BLACK);
+  }
+
+  drawArcText(ctx, "OCT 28-31  •  2026", cx, cy, (mid + inner) / 2, Math.PI * 0.25, Math.PI * 0.75, {
+    font: `800 32px "DM Sans", system-ui, sans-serif`,
+    fill: BLACK,
+    invert: true,
+  });
+  ctx.fillStyle = CREAM;
+  ctx.font = `800 26px "DM Sans", system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText("HACKER HOUSE GOA", cx, 64);
+  drawStamp(ctx, theme, cx, cy + photoR * 0.48);
+}
+
+function drawSeal(ctx: CanvasRenderingContext2D, photo: ImageBitmap, theme: FrameTheme, size: number) {
+  const pad = 36;
+  ctx.strokeStyle = BLACK;
+  ctx.lineWidth = 14;
+  ctx.strokeRect(pad, pad, size - pad * 2, size - pad * 2);
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 5;
+  ctx.strokeRect(pad + 16, pad + 16, size - (pad + 16) * 2, size - (pad + 16) * 2);
+
+  const cx = size / 2;
+  const cy = size / 2 - 40;
+  const ringOuter = 430;
+  const ringInner = 340;
+  const photoR = ringInner - 6;
+
+  clipPhotoCircle(ctx, photo, cx, cy, photoR, size);
+  fillRing(ctx, theme, cx, cy, ringOuter, ringInner);
+  ctx.beginPath();
+  ctx.arc(cx, cy, ringInner, 0, Math.PI * 2);
+  ctx.strokeStyle = strokeOf(theme.innerStroke);
+  ctx.lineWidth = 7;
+  ctx.stroke();
+
+  // Lockup under circle
+  ctx.fillStyle = MAGENTA;
+  ctx.fillRect(size / 2 - 160, size - 200, 320, 56);
+  ctx.strokeStyle = BLACK;
+  ctx.lineWidth = 4;
+  ctx.strokeRect(size / 2 - 160, size - 200, 320, 56);
+  ctx.fillStyle = YELLOW;
+  ctx.font = `900 32px "Archivo Black", Impact, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("GOA 2026", cx, size - 172);
+
+  ctx.fillStyle = CREAM;
+  ctx.font = `700 18px "DM Sans", system-ui, sans-serif`;
+  ctx.fillText("HACKER HOUSE  ·  OCT 28–31", cx, size - 120);
+
+  drawStamp(ctx, theme, cx, cy + photoR * 0.55, 110);
+}
+
 export async function composeFrame(
   photo: ImageBitmap,
   theme: FrameTheme = FRAME_THEMES[0]!,
@@ -303,52 +504,30 @@ export async function composeFrame(
 
   drawBg(ctx, theme, size);
 
-  const cx = size / 2;
-  const cy = size / 2;
-  const ringOuter = 520;
-  const ringInner = 400;
-  const photoR = ringInner - 6;
-  const textR = (ringOuter + ringInner) / 2;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, photoR, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(cx - photoR, cy - photoR, photoR * 2, photoR * 2);
-  coverCropDraw(ctx, photo, size);
-  ctx.restore();
-
-  fillRing(ctx, theme, cx, cy, ringOuter, ringInner);
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, ringInner, 0, Math.PI * 2);
-  ctx.strokeStyle = strokeColor(theme.innerStroke);
-  ctx.lineWidth = 8;
-  ctx.stroke();
-
-  if (theme.diamonds) {
-    const dFill = theme.ring === "solidYellow" ? MAGENTA : BLACK;
-    drawDiamond(ctx, cx - textR, cy, 16, dFill);
-    drawDiamond(ctx, cx + textR, cy, 16, dFill);
+  switch (theme.frameLayout) {
+    case "classic":
+      drawClassic(ctx, photo, theme, size);
+      break;
+    case "sunburst":
+      drawSunburst(ctx, photo, theme, size);
+      break;
+    case "stadium":
+      drawStadium(ctx, photo, theme, size);
+      break;
+    case "inset":
+      drawInset(ctx, photo, theme, size);
+      break;
+    case "orbit":
+      drawOrbit(ctx, photo, theme, size);
+      break;
+    case "seal":
+      drawSeal(ctx, photo, theme, size);
+      break;
+    default: {
+      const _e: never = theme.frameLayout;
+      void _e;
+    }
   }
-
-  const topFill = theme.arcInk === "cream" ? CREAM : BLACK;
-  const bottomFill = theme.arcInk === "black" ? BLACK : CREAM;
-
-  drawArcText(ctx, "HACKER HOUSE GOA", cx, cy, textR, -Math.PI * 0.82, -Math.PI * 0.18, {
-    font: `800 44px "DM Sans", system-ui, sans-serif`,
-    fill: topFill,
-  });
-
-  drawArcText(ctx, "OCT 28-31  •  2026", cx, cy, textR, Math.PI * 0.22, Math.PI * 0.78, {
-    font: `800 36px "DM Sans", system-ui, sans-serif`,
-    fill: bottomFill,
-    invert: true,
-  });
-
-  drawStamp(ctx, theme, cx, cy + photoR * 0.48);
-  drawOuter(ctx, theme, size);
 
   return canvasToJpegBlob(canvas);
 }
