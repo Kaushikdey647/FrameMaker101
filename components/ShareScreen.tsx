@@ -83,67 +83,88 @@ export function ShareScreen({
           </p>
         ) : sharing ? (
           <p className="text-sm font-bold text-[var(--yellow)]" aria-live="polite">
-            Preparing share…
+            Opening share…
           </p>
         ) : (
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted-on-green)] sm:text-sm">
-            Looks good — send it out
+            {canNativeShare
+              ? "Tap Share — pick WhatsApp, X, or any app"
+              : "Save your photo, then share from your gallery"}
           </p>
         )}
       </main>
 
       <footer className="shrink-0 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1 sm:px-4 sm:pt-2">
-        <div className="mecha-panel mx-auto w-full max-w-md bg-[var(--cream)] px-2 py-3 text-[var(--ink)] sm:px-3 sm:py-5">
-          <p className="mb-3 text-center text-[0.62rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-soft)] sm:mb-4 sm:text-[0.68rem] sm:tracking-[0.22em]">
-            Share // Control Panel
-          </p>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <ShareAction
-              label={webViewSave ? "Save" : "Download"}
+        <div className="mecha-panel mx-auto flex w-full max-w-md flex-col gap-3 bg-[var(--cream)] px-3 py-4 text-[var(--ink)] sm:gap-4 sm:px-4 sm:py-5">
+          {/* Primary mobile action */}
+          {canNativeShare ? (
+            <button
+              type="button"
+              onClick={onShareNative}
+              disabled={sharing}
+              className="flex w-full items-center justify-center gap-2 border-[3px] border-[var(--black)] bg-[var(--magenta)] py-3.5 text-base font-bold uppercase tracking-[0.14em] text-white shadow-[4px_4px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-[2px_2px_0_0_#111] disabled:opacity-40"
+            >
+              <ShareIcon />
+              Share
+            </button>
+          ) : (
+            <button
+              type="button"
               onClick={onDownload}
               disabled={sharing || webViewSave}
-              title={webViewSave ? "Long-press the photo to save" : "Download JPEG"}
-              tone="yellow"
+              className="flex w-full items-center justify-center gap-2 border-[3px] border-[var(--black)] bg-[var(--yellow)] py-3.5 text-base font-bold uppercase tracking-[0.14em] text-[var(--black)] shadow-[4px_4px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-[2px_2px_0_0_#111] disabled:opacity-40"
             >
               <DownloadIcon />
-            </ShareAction>
-            <ShareAction
-              label="Apps"
-              onClick={onShareNative}
-              disabled={sharing || !canNativeShare}
-              title={
-                canNativeShare
-                  ? "Share via WhatsApp, Instagram, Files…"
-                  : "System share isn’t available here (needs HTTPS)"
-              }
-              tone="magenta"
-            >
-              <AppsIcon />
-            </ShareAction>
-            <ShareAction
-              label="X"
+              {webViewSave ? "Long-press photo" : "Save photo"}
+            </button>
+          )}
+
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            {canNativeShare ? (
+              <SecondaryAction
+                label={webViewSave ? "Save" : "Save"}
+                onClick={onDownload}
+                disabled={sharing || webViewSave}
+                title={
+                  webViewSave
+                    ? "Long-press the photo to save"
+                    : "Download JPEG to your phone"
+                }
+                tone="yellow"
+              >
+                <DownloadIcon />
+              </SecondaryAction>
+            ) : null}
+            <SecondaryAction
+              label="Post to X"
               onClick={onShareX}
               disabled={sharing}
               title={
                 canNativeShare
-                  ? "Opens share — pick X to attach the image"
-                  : "Opens X; image is copied or downloaded to attach"
+                  ? "Opens share — tap X to post with photo"
+                  : "Opens X with caption; save photo to attach"
               }
               tone="green"
+              className={canNativeShare ? undefined : "col-span-2"}
             >
               <XIcon />
-            </ShareAction>
+            </SecondaryAction>
           </div>
+
           {hint && !error ? (
             <p
-              className="mt-3 text-center text-xs font-semibold text-[var(--ink-soft)]"
+              className="text-center text-xs font-semibold text-[var(--ink-soft)]"
               aria-live="polite"
             >
               {hint}
             </p>
           ) : webViewSave ? (
-            <p className="mt-3 text-center text-xs text-[var(--ink-soft)]">
+            <p className="text-center text-xs text-[var(--ink-soft)]">
               Long-press the photo to save in this browser
+            </p>
+          ) : !canNativeShare ? (
+            <p className="text-center text-xs text-[var(--ink-soft)]">
+              On your phone, open the live HTTPS site for one-tap share
             </p>
           ) : null}
         </div>
@@ -162,27 +183,27 @@ export function ShareScreen({
   );
 }
 
-function ShareAction({
+function SecondaryAction({
   label,
   children,
   onClick,
   disabled,
   title,
   tone,
+  className,
 }: {
   label: string;
   children: ReactNode;
   onClick: () => void;
   disabled?: boolean;
   title?: string;
-  tone: "yellow" | "magenta" | "green";
+  tone: "yellow" | "green";
+  className?: string;
 }) {
   const fill =
     tone === "yellow"
       ? "bg-[var(--yellow)] text-[var(--black)]"
-      : tone === "magenta"
-        ? "bg-[var(--magenta)] text-white"
-        : "bg-[var(--green)] text-[var(--yellow)]";
+      : "bg-[var(--green)] text-[var(--yellow)]";
 
   return (
     <button
@@ -190,23 +211,31 @@ function ShareAction({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex w-full flex-col items-center gap-2 disabled:opacity-35"
+      className={`flex items-center justify-center gap-2 border-[3px] border-[var(--black)] py-3 text-sm font-bold uppercase tracking-[0.1em] shadow-[3px_3px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-[1px_1px_0_0_#111] disabled:opacity-35 ${fill} ${className ?? ""}`}
     >
-      <span
-        className={`flex aspect-square w-full max-w-[3.75rem] items-center justify-center border-[3px] border-[var(--black)] shadow-[4px_4px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-[2px_2px_0_0_#111] sm:max-w-[4rem] ${fill}`}
-      >
-        {children}
-      </span>
-      <span className="text-[0.65rem] font-bold uppercase tracking-wide text-[var(--ink-soft)] sm:text-[0.72rem]">
-        {label}
-      </span>
+      {children}
+      {label}
     </button>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M14 5h5v5M19 5l-9 9M10 5H5v14h14v-5"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
+    </svg>
   );
 }
 
 function DownloadIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M12 4v10m0 0 4-4m-4 4-4-4M5 18h14"
         stroke="currentColor"
@@ -218,25 +247,9 @@ function DownloadIcon() {
   );
 }
 
-function AppsIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect x="3" y="3" width="6" height="6" fill="currentColor" />
-      <rect x="9" y="3" width="6" height="6" fill="currentColor" />
-      <rect x="15" y="3" width="6" height="6" fill="currentColor" />
-      <rect x="3" y="9" width="6" height="6" fill="currentColor" />
-      <rect x="9" y="9" width="6" height="6" fill="currentColor" />
-      <rect x="15" y="9" width="6" height="6" fill="currentColor" />
-      <rect x="3" y="15" width="6" height="6" fill="currentColor" />
-      <rect x="9" y="15" width="6" height="6" fill="currentColor" />
-      <rect x="15" y="15" width="6" height="6" fill="currentColor" />
-    </svg>
-  );
-}
-
 function XIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.527-8.69L1.5 2.25h6.636l4.254 5.622L18.244 2.25Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
     </svg>
   );

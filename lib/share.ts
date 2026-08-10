@@ -31,13 +31,14 @@ export function canShareFiles(file: File): boolean {
   );
 }
 
+/** Mobile system share sheet with JPEG + caption (WhatsApp, X, IG, Files…). */
 export async function shareNative(
   readyFile: File,
   opts?: { serial?: string; format?: "frame" | "pass" },
 ): Promise<"shared" | "cancelled"> {
   if (!canShareFiles(readyFile)) {
     throw new Error(
-      "System share isn’t available here. Try Share to X, or download the image.",
+      "Sharing needs HTTPS on your phone. Save the photo instead, or open the live site.",
     );
   }
 
@@ -57,62 +58,11 @@ export async function shareNative(
   }
 }
 
-function openXIntent(caption: string): void {
-  const intent = `https://x.com/intent/post?text=${encodeURIComponent(caption)}`;
-  window.open(intent, "_blank", "noopener,noreferrer");
-}
-
-/** Convert JPEG/other image File to PNG for clipboard paste into X web compose. */
-async function fileToPngBlob(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  try {
-    const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("2D canvas unavailable");
-    ctx.drawImage(bitmap, 0, 0);
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("PNG encode failed"))),
-        "image/png",
-      );
-    });
-  } finally {
-    bitmap.close();
-  }
-}
-
-async function copyImageToClipboard(file: File): Promise<boolean> {
-  if (
-    typeof navigator === "undefined" ||
-    !navigator.clipboard?.write ||
-    typeof ClipboardItem === "undefined"
-  ) {
-    return false;
-  }
-  try {
-    const png = await fileToPngBlob(file);
-    await navigator.clipboard.write([
-      new ClipboardItem({ "image/png": png }),
-    ]);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export type ShareToXResult =
-  | "shared"
-  | "cancelled"
-  | "clipboard-intent"
-  | "intent";
+export type ShareToXResult = "shared" | "cancelled" | "intent";
 
 /**
- * Get the JPEG into an X post when the platform allows it.
- * - Secure mobile: Web Share with file (user must pick X — only way browsers can hand media to X).
- * - Desktop: copy image to clipboard + open X compose (paste with Cmd/Ctrl+V).
- * - Else: open intent only (caller should download the file for manual attach).
+ * Mobile-first X: same Web Share path so the JPEG can attach when the user picks X.
+ * Fallback (no file share): open X compose with caption only — caller should save the photo.
  */
 export async function shareToX(
   readyFile: File,
@@ -120,24 +70,22 @@ export async function shareToX(
 ): Promise<ShareToXResult> {
   const caption = buildShareCaption(opts);
 
-  // Only path that can auto-attach the JPEG into the X mobile app.
   if (canShareFiles(readyFile)) {
     try {
       await navigator.share({
         files: [readyFile],
         text: caption,
-        title: "Post to X — HH Goa 2026",
+        title: "HH Goa 2026",
       });
       return "shared";
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return "cancelled";
       }
-      // Fall through to clipboard / intent.
     }
   }
 
-  const copied = await copyImageToClipboard(readyFile);
-  openXIntent(caption);
-  return copied ? "clipboard-intent" : "intent";
+  const intent = `https://x.com/intent/post?text=${encodeURIComponent(caption)}`;
+  window.open(intent, "_blank", "noopener,noreferrer");
+  return "intent";
 }

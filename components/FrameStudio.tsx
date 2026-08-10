@@ -168,17 +168,14 @@ export function FrameStudio() {
         case "cancelled":
           break;
         case "shared":
-          setHint("Pick X in the share menu so the image is attached");
-          break;
-        case "clipboard-intent":
-          setHint("Image copied — paste it into your X post (⌘V / Ctrl+V)");
+          setHint("Tap X in the list to post with your photo");
           break;
         case "intent":
           if (webViewSave) {
             setHint("Long-press the photo to save, then attach it in X");
           } else {
             downloadBlob(ready.blob, passFilename(ready));
-            setHint("Image saved — attach it in your X post");
+            setHint("Photo saved — attach it in your X post");
           }
           break;
         default: {
