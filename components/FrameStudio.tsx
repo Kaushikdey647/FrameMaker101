@@ -1,13 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { blobToFrameFile, composeFrame } from "@/lib/compose";
 import { blobToPassFile, composeBuilderId } from "@/lib/compose-id";
 import { decodePhoto } from "@/lib/decode";
 import { downloadBlob, isInAppWebView } from "@/lib/download";
-import { getAppUrl, canShareFiles, shareNative, shareToX, uploadPassJpeg } from "@/lib/share";
-import { normalizeSerial } from "@/lib/serial";
+import { canShareFiles, shareNative, shareToX } from "@/lib/share";
+import { mintSerial } from "@/lib/serial";
+import type { IndiaAirport } from "@/lib/india-airports";
 import { LandingScreen, type FormatMode } from "./LandingScreen";
 import { ShareScreen } from "./ShareScreen";
 
@@ -20,24 +20,25 @@ type Ready = {
   title?: string;
   name?: string;
   role?: string;
-  imageUrl?: string;
 };
 
 export function FrameStudio() {
-  const router = useRouter();
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<FormatMode>("frame");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
+  const [origin, setOrigin] = useState<IndiaAirport | null>(null);
   const [ready, setReady] = useState<Ready | null>(null);
   const [busy, setBusy] = useState(false);
   const [converting, setConverting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [webViewSave] = useState(() =>
-    typeof navigator === "undefined" ? false : isInAppWebView(),
-  );
+  const [webViewSave, setWebViewSave] = useState(false);
+
+  useEffect(() => {
+    setWebViewSave(isInAppWebView());
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -69,61 +70,37 @@ export function FrameStudio() {
         return;
       }
 
-      const createRes = await fetch("/api/pass/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), role: role.trim() }),
-      });
-      const createJson = (await createRes.json()) as {
-        serial?: string;
-        title?: string;
-        error?: string;
-      };
-      if (!createRes.ok || !createJson.serial || !createJson.title) {
-        throw new Error(createJson.error || "Could not reserve Builder ID");
-      }
-
-      const { serial, title } = createJson;
-      const { blob } = await composeBuilderId({
-        photo: bitmap,
-        name: name.trim(),
-        role: role.trim(),
-        serial,
-      });
-
-      const imageUrl = await uploadPassJpeg(serial, blob);
-      const finalizeRes = await fetch("/api/pass/finalize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          serial,
+      if (mode === "pass") {
+        if (!origin) throw new Error("Pick the airport you’re flying from");
+        const serial = mintSerial();
+        const { blob, title } = await composeBuilderId({
+          photo: bitmap,
           name: name.trim(),
           role: role.trim(),
-          title,
-          imageUrl,
-          createdAt: new Date().toISOString(),
-        }),
-      });
-      if (!finalizeRes.ok) {
-        const fj = (await finalizeRes.json()) as { error?: string };
-        throw new Error(fj.error || "Could not save Builder ID");
+          serial,
+          origin,
+        });
+
+        const previewUrl = URL.createObjectURL(blob);
+        setReady((prev) => {
+          if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+          return {
+            blob,
+            file: blobToPassFile(blob, serial),
+            previewUrl,
+            format: "pass",
+            serial,
+            title,
+            name: name.trim(),
+            role: role.trim(),
+          };
+        });
+        return;
       }
 
-      const previewUrl = URL.createObjectURL(blob);
-      setReady((prev) => {
-        if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
-        return {
-          blob,
-          file: blobToPassFile(blob, serial),
-          previewUrl,
-          format: "pass",
-          serial,
-          title,
-          name: name.trim(),
-          role: role.trim(),
-          imageUrl,
-        };
-      });
+      // unreachable — modes are frame | pass
+      const _exhaustive: never = mode;
+      void _exhaustive;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create that image");
     } finally {
@@ -176,36 +153,24 @@ export function FrameStudio() {
     setSharing(true);
     setError(null);
     try {
-      await shareToX(ready.blob, {
+      const result = await shareToX(ready.file, {
         format: ready.format,
         serial: ready.serial,
-        existingImageUrl: ready.imageUrl,
       });
+      if (result === "intent" && !webViewSave) {
+        downloadBlob(
+          ready.blob,
+          ready.format === "pass" && ready.serial
+            ? `${ready.serial}.jpg`
+            : "hh-goa-2026.jpg",
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Share to X failed");
     } finally {
       setSharing(false);
     }
   }
-
-  async function onCopyLink() {
-    if (!ready?.serial) return;
-    const url = `${getAppUrl()}/id/${ready.serial}`;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch {
-      setError("Could not copy link");
-    }
-  }
-
-  function onLookup(serial: string) {
-    router.push(`/id/${normalizeSerial(serial)}`);
-  }
-
-  const lookupUrl =
-    ready?.format === "pass" && ready.serial
-      ? `${getAppUrl()}/id/${ready.serial}`
-      : undefined;
 
   return (
     <>
@@ -230,7 +195,6 @@ export function FrameStudio() {
           previewUrl={ready.previewUrl}
           format={ready.format}
           serial={ready.serial}
-          lookupUrl={lookupUrl}
           canNativeShare={canShareFiles(ready.file)}
           webViewSave={webViewSave}
           sharing={sharing}
@@ -239,7 +203,6 @@ export function FrameStudio() {
           onShareNative={() => void onShareNative()}
           onShareX={() => void onShareX()}
           onRetake={onRetake}
-          onCopyLink={() => void onCopyLink()}
         />
       ) : (
         <LandingScreen
@@ -247,14 +210,15 @@ export function FrameStudio() {
           onModeChange={setMode}
           name={name}
           role={role}
+          origin={origin}
           onNameChange={setName}
           onRoleChange={setRole}
+          onOriginChange={setOrigin}
           busy={busy}
           converting={converting}
           error={error}
           onCamera={() => cameraRef.current?.click()}
           onGallery={() => galleryRef.current?.click()}
-          onLookup={onLookup}
         />
       )}
     </>

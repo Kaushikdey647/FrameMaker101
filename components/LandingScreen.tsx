@@ -1,5 +1,8 @@
 "use client";
 
+import { AirportPicker } from "./AirportPicker";
+import type { IndiaAirport } from "@/lib/india-airports";
+
 export type FormatMode = "frame" | "pass";
 
 type LandingScreenProps = {
@@ -7,14 +10,15 @@ type LandingScreenProps = {
   onModeChange: (mode: FormatMode) => void;
   name: string;
   role: string;
+  origin: IndiaAirport | null;
   onNameChange: (v: string) => void;
   onRoleChange: (v: string) => void;
+  onOriginChange: (v: IndiaAirport | null) => void;
   busy: boolean;
   converting: boolean;
   error: string | null;
   onCamera: () => void;
   onGallery: () => void;
-  onLookup: (serial: string) => void;
 };
 
 export function LandingScreen({
@@ -22,24 +26,26 @@ export function LandingScreen({
   onModeChange,
   name,
   role,
+  origin,
   onNameChange,
   onRoleChange,
+  onOriginChange,
   busy,
   converting,
   error,
   onCamera,
   onGallery,
-  onLookup,
 }: LandingScreenProps) {
   const status = converting
     ? "Converting…"
     : busy
       ? mode === "pass"
-        ? "Minting your Builder ID…"
+        ? "Building your ID…"
         : "Framing your photo…"
       : null;
 
-  const passReady = name.trim().length >= 2 && role.trim().length >= 1;
+  const passReady =
+    name.trim().length >= 2 && role.trim().length >= 1 && origin !== null;
 
   return (
     <div className="relative flex min-h-dvh flex-col overflow-hidden bg-[var(--green)]">
@@ -110,6 +116,7 @@ export function LandingScreen({
                 className="h-12 w-full rounded-full border-0 bg-[var(--cream)] px-4 text-[var(--ink)] outline-none ring-2 ring-transparent placeholder:text-[var(--ink-soft)]/50 focus:ring-[var(--yellow)]"
               />
             </label>
+            <AirportPicker value={origin} onChange={onOriginChange} disabled={busy} />
           </div>
         ) : null}
 
@@ -142,8 +149,6 @@ export function LandingScreen({
             {error}
           </p>
         ) : null}
-
-        <LookupForm onLookup={onLookup} disabled={busy} />
       </header>
 
       <footer className="relative z-10 flex flex-col items-center pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -180,46 +185,23 @@ function ModeChip({
   );
 }
 
-function LookupForm({
-  onLookup,
-  disabled,
-}: {
-  onLookup: (serial: string) => void;
-  disabled: boolean;
-}) {
-  return (
-    <form
-      className="mt-8 w-full max-w-sm"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const fd = new FormData(e.currentTarget);
-        const serial = String(fd.get("serial") ?? "").trim();
-        if (serial) onLookup(serial);
-      }}
-    >
-      <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[var(--yellow)]">
-        Already have an ID?
-      </p>
-      <div className="flex gap-2">
-        <input
-          name="serial"
-          placeholder="HH-GOA-XXXXX"
-          disabled={disabled}
-          className="h-11 min-w-0 flex-1 rounded-full bg-[var(--cream)]/15 px-4 text-sm text-[var(--cream)] outline-none ring-1 ring-white/15 placeholder:text-white/35 focus:ring-[var(--yellow)]"
-        />
-        <button
-          type="submit"
-          disabled={disabled}
-          className="h-11 shrink-0 rounded-full bg-[var(--cream)] px-4 text-sm font-bold text-[var(--ink)] disabled:opacity-45"
-        >
-          Open
-        </button>
-      </div>
-    </form>
-  );
-}
-
 function SunPalms() {
+  // Precomputed so SSR/client floats match (avoids hydration mismatch).
+  const rays = [
+    [130, 40, 140, 40],
+    [127.32, 50, 135.98, 55],
+    [120, 57.32, 125, 65.98],
+    [110, 60, 110, 70],
+    [100, 57.32, 95, 65.98],
+    [92.68, 50, 84.02, 55],
+    [90, 40, 80, 40],
+    [92.68, 30, 84.02, 25],
+    [100, 22.68, 95, 14.02],
+    [110, 20, 110, 10],
+    [120, 22.68, 125, 14.02],
+    [127.32, 30, 135.98, 25],
+  ] as const;
+
   return (
     <svg
       width="220"
@@ -230,25 +212,18 @@ function SunPalms() {
       className="opacity-90"
     >
       <circle cx="110" cy="40" r="14" fill="#F5C518" />
-      {Array.from({ length: 12 }).map((_, i) => {
-        const a = (i / 12) * Math.PI * 2;
-        const x1 = 110 + Math.cos(a) * 20;
-        const y1 = 40 + Math.sin(a) * 20;
-        const x2 = 110 + Math.cos(a) * 30;
-        const y2 = 40 + Math.sin(a) * 30;
-        return (
-          <line
-            key={i}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            stroke="#F5C518"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        );
-      })}
+      {rays.map(([x1, y1, x2, y2], i) => (
+        <line
+          key={i}
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
+          stroke="#F5C518"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      ))}
       <path
         d="M28 68c2-28 8-44 18-52M28 28c-14 6-22 18-24 28M28 28c0-14 10-24 22-28M28 28c12-4 22 2 28 12"
         stroke="#083821"

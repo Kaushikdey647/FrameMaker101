@@ -1,6 +1,6 @@
 # HH Goa 2026 — Frame & Builder ID
 
-Zero-login, mobile-first tool for **Format A** (PFP frame) and **Format B** (Builder ID with name, role, witty title, and serial).
+Zero-login, mobile-first tool for **Format A** (PFP frame) and **Format B** (Builder ID with name, role, witty title, and serial). Images stay on-device until you share or download — nothing is uploaded to our servers.
 
 ## Brand
 
@@ -10,19 +10,9 @@ Deep green `#0B4D2C`, yellow `#F5C518`, magenta `#FF2D8A`, cream `#F7F1E6`. Font
 
 ```bash
 npm install
-npx vercel link   # if needed
-npx vercel env pull
 ```
 
-Required Blob env (OIDC — connect a Blob store with **Development** included):
-
-- `BLOB_STORE_ID`
-- `VERCEL_OIDC_TOKEN` (short-lived; re-pull when it expires)
-- `BLOB_WEBHOOK_PUBLIC_KEY`
-
-Also set `NEXT_PUBLIC_APP_URL` (e.g. `http://localhost:3000`).
-
-Remove any empty `BLOB_READ_WRITE_TOKEN=""` line — an empty value can confuse local setup. Browser uploads use OIDC + presigned URLs.
+Optional: set `NEXT_PUBLIC_APP_URL` in `.env.local` (see `.env.example`) so share captions use your real origin.
 
 ```bash
 npm run dev
@@ -32,11 +22,7 @@ npm run dev
 
 | Mode | Inputs | Output | Persistence |
 |------|--------|--------|-------------|
-| Profile frame | Photo | 1200² framed JPEG | Local until X share fallback |
-| Builder ID | Photo + name + role | 1080×1350 badge JPEG | Vercel Blob `passes/{serial}.*` |
+| Profile frame | Photo | 1200² framed JPEG | Local until share/download |
+| Builder ID | Photo + name + role | 1600×800 passport JPEG (2:1) | Local until share/download |
 
-Serials are `HH-GOA-` + 5 Crockford chars. Lookup at `/id/HH-GOA-XXXXX`.
-
-## OG / X previews
-
-Test unfurls on **production** with Deployment Protection off.
+Serials are `HH-GOA-` + 5 Crockford chars, minted on-device. Share to X uses the system share sheet with the JPEG when available; otherwise opens X with caption + app link.

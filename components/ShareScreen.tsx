@@ -7,7 +7,6 @@ type ShareScreenProps = {
   previewUrl: string;
   format: FormatMode;
   serial?: string;
-  lookupUrl?: string;
   canNativeShare: boolean;
   webViewSave: boolean;
   sharing: boolean;
@@ -16,14 +15,12 @@ type ShareScreenProps = {
   onShareNative: () => void;
   onShareX: () => void;
   onRetake: () => void;
-  onCopyLink?: () => void;
 };
 
 export function ShareScreen({
   previewUrl,
   format,
   serial,
-  lookupUrl,
   canNativeShare,
   webViewSave,
   sharing,
@@ -32,7 +29,6 @@ export function ShareScreen({
   onShareNative,
   onShareX,
   onRetake,
-  onCopyLink,
 }: ShareScreenProps) {
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--green)] text-[var(--cream)]">
@@ -48,7 +44,7 @@ export function ShareScreen({
       <main className="flex flex-1 flex-col items-center justify-center px-5 py-3">
         <div
           className={`share-photo-enter relative w-full overflow-hidden rounded-[1.35rem] bg-[var(--cream)] shadow-[0_30px_80px_-24px_rgba(0,0,0,0.55)] ring-1 ring-black/10 ${
-            format === "pass" ? "max-w-[min(100%,380px)]" : "max-w-[min(100%,420px)]"
+            format === "pass" ? "max-w-[min(100%,560px)]" : "max-w-[min(100%,420px)]"
           }`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -59,26 +55,15 @@ export function ShareScreen({
                 ? "Your HH Goa 2026 Builder ID"
                 : "Your HH Goa 2026 framed photo"
             }
-            className={`w-full object-contain ${format === "pass" ? "aspect-[1080/1350]" : "aspect-square"}`}
+            className={`w-full object-contain ${format === "pass" ? "aspect-[2/1]" : "aspect-square"}`}
             draggable={false}
           />
         </div>
 
         {format === "pass" && serial ? (
-          <div className="mt-4 text-center">
-            <p className="font-mono text-sm font-bold tracking-wider text-[var(--yellow)]">
-              {serial}
-            </p>
-            {lookupUrl ? (
-              <button
-                type="button"
-                onClick={onCopyLink}
-                className="mt-1 text-xs font-medium text-[var(--muted-on-green)] underline-offset-2 hover:underline"
-              >
-                Copy ID link
-              </button>
-            ) : null}
-          </div>
+          <p className="mt-4 font-mono text-sm font-bold tracking-wider text-[var(--yellow)]">
+            {serial}
+          </p>
         ) : null}
 
         {error ? (
