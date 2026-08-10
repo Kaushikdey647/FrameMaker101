@@ -48,14 +48,14 @@ export function LandingScreen({
     name.trim().length >= 2 && role.trim().length >= 1 && origin !== null;
 
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden">
-      <header className="land-in relative z-10 flex flex-1 flex-col items-center px-5 pb-6 pt-[max(2.5rem,env(safe-area-inset-top))] text-center">
+    <div className="relative flex min-h-dvh flex-col">
+      <header className="land-in relative z-10 flex flex-1 flex-col items-center overflow-y-auto px-4 pb-4 pt-[max(1.5rem,env(safe-area-inset-top))] text-center sm:px-5 sm:pb-6 sm:pt-[max(2.5rem,env(safe-area-inset-top))]">
         <p className="border-2 border-[var(--yellow)] bg-[var(--green-deep)] px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.28em] text-[var(--yellow)]">
           Frame In Goa
         </p>
 
-        <div className="relative mt-6 max-w-full">
-          <h1 className="mecha-title font-[family-name:var(--font-display)] text-[clamp(2.6rem,11vw,4.25rem)] leading-[0.88] text-[var(--yellow)]">
+        <div className="relative mt-4 max-w-full sm:mt-6">
+          <h1 className="mecha-title font-[family-name:var(--font-display)] text-[clamp(2.2rem,10vw,4.25rem)] leading-[0.88] text-[var(--yellow)]">
             HACKER
             <br />
             HOUSE

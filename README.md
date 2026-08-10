@@ -1,6 +1,6 @@
 # HH Goa 2026 — Frame & Builder ID
 
-Zero-login, mobile-first tool for **Format A** (PFP frame) and **Format B** (Builder ID with name, role, witty title, and serial). Images stay on-device until you share or download — nothing is uploaded to our servers.
+Zero-login, mobile-first tool for **Format A** (PFP frame) and **Format B** (Builder ID poster-ticket with name, role, witty title, and serial). Images stay on-device until you share or download — nothing is uploaded to our servers.
 
 ## Brand
 
@@ -23,6 +23,6 @@ npm run dev
 | Mode | Inputs | Output | Persistence |
 |------|--------|--------|-------------|
 | Profile frame | Photo | 1200² framed JPEG | Local until share/download |
-| Builder ID | Photo + name + role | 1600×800 passport JPEG (2:1) | Local until share/download |
+| Builder ID | Photo + name + role + origin airport | 1080×1350 (4:5) poster-ticket JPEG | Local until share/download |
 
 Serials are `HH-GOA-` + 5 Crockford chars, minted on-device. Share to X uses the system share sheet with the JPEG when available; otherwise opens X with caption + app link.

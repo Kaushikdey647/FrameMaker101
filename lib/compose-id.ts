@@ -2,9 +2,9 @@ import { JPEG_QUALITY } from "./compose";
 import { pickBuilderTitle } from "./builder-titles";
 import { GOA_DEST_IATA, type IndiaAirport } from "./india-airports";
 
-/** Passport-style Builder ID — 2:1 landscape, mecha-poster graphic language. */
-export const ID_WIDTH = 1600;
-export const ID_HEIGHT = 800;
+/** Poster-ticket Builder ID — 4:5 share card. */
+export const ID_WIDTH = 1080;
+export const ID_HEIGHT = 1350;
 
 const GREEN = "#0B4D2C";
 const GREEN_DEEP = "#083821";
@@ -13,7 +13,6 @@ const MAGENTA = "#FF2D8A";
 const CREAM = "#F7F1E6";
 const PAPER = "#F3EDE3";
 const INK = "#1A1A1A";
-const MUTED = "#5C6B62";
 
 export type ComposeIdInput = {
   photo: ImageBitmap;
@@ -44,120 +43,51 @@ function coverRect(
   ctx.restore();
 }
 
-function drawHalftoneGrid(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  ctx.clip();
-
-  ctx.strokeStyle = "rgba(11,77,44,0.08)";
-  ctx.lineWidth = 1;
-  for (let gx = x; gx < x + w; gx += 24) {
-    ctx.beginPath();
-    ctx.moveTo(gx, y);
-    ctx.lineTo(gx, y + h);
-    ctx.stroke();
-  }
-  for (let gy = y; gy < y + h; gy += 24) {
-    ctx.beginPath();
-    ctx.moveTo(x, gy);
-    ctx.lineTo(x + w, gy);
-    ctx.stroke();
-  }
-
-  ctx.fillStyle = "rgba(11,77,44,0.12)";
-  for (let row = 0; row < h; row += 10) {
-    for (let col = 0; col < w; col += 10) {
-      const r = ((row + col) % 20 === 0 ? 1.6 : 1.0);
-      ctx.beginPath();
-      ctx.arc(x + col + 2, y + row + 2, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  ctx.restore();
-}
-
 function fitText(
   ctx: CanvasRenderingContext2D,
   text: string,
   maxWidth: number,
   baseSize: number,
   minSize: number,
+  fontFamily: string,
 ): number {
   let size = baseSize;
-  ctx.font = `700 ${size}px "DM Sans", system-ui, sans-serif`;
+  ctx.font = `700 ${size}px ${fontFamily}`;
   while (size > minSize && ctx.measureText(text).width > maxWidth) {
-    size -= 1;
-    ctx.font = `700 ${size}px "DM Sans", system-ui, sans-serif`;
+    size -= 2;
+    ctx.font = `700 ${size}px ${fontFamily}`;
   }
   return size;
 }
 
-function fieldLabel(ctx: CanvasRenderingContext2D, label: string, x: number, y: number, w: number) {
-  ctx.fillStyle = MUTED;
-  ctx.font = `700 13px "DM Sans", system-ui, sans-serif`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText(label.toUpperCase(), x, y);
-  ctx.strokeStyle = GREEN;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x, y + 6);
-  ctx.lineTo(x + Math.min(w, 120), y + 6);
-  ctx.stroke();
-}
-
-function fieldValue(
+function drawCornerTicks(
   ctx: CanvasRenderingContext2D,
-  value: string,
   x: number,
   y: number,
-  maxWidth: number,
-  color = INK,
-  baseSize = 32,
+  w: number,
+  h: number,
 ) {
-  ctx.fillStyle = color;
-  const size = fitText(ctx, value, maxWidth, baseSize, 16);
-  ctx.font = `700 ${size}px "DM Sans", system-ui, sans-serif`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText(value, x, y);
+  const tick = 36;
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 6;
+  ctx.lineCap = "square";
+  for (const [tx, ty, dx, dy] of [
+    [x, y, 1, 0],
+    [x, y, 0, 1],
+    [x + w, y, -1, 0],
+    [x + w, y, 0, 1],
+    [x, y + h, 1, 0],
+    [x, y + h, 0, -1],
+    [x + w, y + h, -1, 0],
+    [x + w, y + h, 0, -1],
+  ] as const) {
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx + dx * tick, ty + dy * tick);
+    ctx.stroke();
+  }
 }
 
-function mrzSanitize(raw: string, len: number): string {
-  const map: Record<string, string> = {
-    " ": "<",
-    "-": "<",
-    _: "<",
-    ".": "<",
-    "/": "<",
-  };
-  let s = raw
-    .toUpperCase()
-    .replace(/[^A-Z0-9 <]/g, "")
-    .replace(/./g, (c) => map[c] ?? c);
-  s = s.replace(/ /g, "<");
-  if (s.length > len) return s.slice(0, len);
-  return s.padEnd(len, "<");
-}
-
-function buildMrz(name: string, serial: string, role: string): [string, string] {
-  const serialBody = serial.replace(/^HH-GOA-/, "");
-  const line1 = mrzSanitize(`P<HHG${name}<<BUILDER`, 44);
-  const line2 = mrzSanitize(
-    `${serialBody}HHG2603158M2612316${role.replace(/\s+/g, "").slice(0, 12)}`,
-    44,
-  );
-  return [line1, line2];
-}
-
-/** Solid dark-green angular palm + sun (mecha silhouette). */
 function drawMechaPalm(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -167,12 +97,11 @@ function drawMechaPalm(
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(scale, scale);
-  ctx.fillStyle = GREEN;
-  ctx.strokeStyle = GREEN;
+  ctx.fillStyle = CREAM;
+  ctx.strokeStyle = CREAM;
   ctx.lineCap = "square";
   ctx.lineJoin = "miter";
 
-  // Angular sun (star)
   ctx.beginPath();
   const pts = [
     [0, -28],
@@ -194,10 +123,8 @@ function drawMechaPalm(
   ctx.closePath();
   ctx.fill();
 
-  // Beach slab
   ctx.fillRect(-40, 22, 78, 12);
 
-  // Trunk
   ctx.lineWidth = 6;
   ctx.beginPath();
   ctx.moveTo(-8, 22);
@@ -205,7 +132,6 @@ function drawMechaPalm(
   ctx.lineTo(-6, -40);
   ctx.stroke();
 
-  // Angular fronds
   ctx.lineWidth = 5;
   for (const [ax, ay] of [
     [-48, -28],
@@ -223,66 +149,70 @@ function drawMechaPalm(
   ctx.restore();
 }
 
-/** Angular dashed polyline origin → GOI. */
-function drawFlightPath(
+/** Compact origin → GOI route for the poster body. */
+function drawRouteGraphic(
   ctx: CanvasRenderingContext2D,
   originIata: string,
-  leftX: number,
-  topY: number,
-  width: number,
+  x: number,
+  y: number,
+  w: number,
 ) {
-  // Mini grid behind path
-  ctx.save();
-  ctx.strokeStyle = "rgba(11,77,44,0.15)";
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 6; i++) {
-    ctx.beginPath();
-    ctx.moveTo(leftX + i * 70, topY);
-    ctx.lineTo(leftX + i * 70, topY + 150);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  const startX = leftX + 36;
-  const endX = leftX + width - 120;
-  const baseY = topY + 120;
+  const startX = x + 8;
+  const endX = x + w - 72;
+  const baseY = y + 42;
   const midX = (startX + endX) / 2;
-  const peakY = topY + 18;
+  const peakY = y + 8;
 
-  ctx.fillStyle = GREEN;
-  ctx.font = `700 46px ui-monospace, SFMono-Regular, Menlo, monospace`;
-  ctx.textAlign = "center";
+  ctx.fillStyle = CREAM;
+  ctx.font = `700 28px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.fillText(originIata, startX, baseY);
-  ctx.fillText(GOA_DEST_IATA, endX, baseY);
 
-  const pathStart = startX + 52;
-  const pathEnd = endX - 52;
-  ctx.strokeStyle = GREEN;
-  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 3;
   ctx.lineCap = "square";
   ctx.lineJoin = "miter";
-  ctx.setLineDash([10, 8]);
+  ctx.setLineDash([8, 6]);
   ctx.beginPath();
-  ctx.moveTo(pathStart, baseY - 10);
-  ctx.lineTo(midX - 40, peakY + 36);
+  ctx.moveTo(startX + 58, baseY - 4);
+  ctx.lineTo(midX - 24, peakY + 20);
   ctx.lineTo(midX, peakY);
-  ctx.lineTo(midX + 40, peakY + 36);
-  ctx.lineTo(pathEnd, baseY - 10);
+  ctx.lineTo(midX + 24, peakY + 20);
+  ctx.lineTo(endX - 8, baseY - 4);
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Angular plane chevron at peak
-  ctx.fillStyle = GREEN;
+  ctx.fillStyle = YELLOW;
   ctx.beginPath();
-  ctx.moveTo(midX + 14, peakY + 4);
-  ctx.lineTo(midX - 10, peakY - 8);
-  ctx.lineTo(midX - 4, peakY + 4);
-  ctx.lineTo(midX - 10, peakY + 16);
+  ctx.moveTo(midX + 10, peakY + 2);
+  ctx.lineTo(midX - 8, peakY - 6);
+  ctx.lineTo(midX - 2, peakY + 2);
+  ctx.lineTo(midX - 8, peakY + 12);
   ctx.closePath();
   ctx.fill();
 
-  drawMechaPalm(ctx, endX + 62, baseY - 2, 1.2);
+  ctx.fillStyle = CREAM;
+  ctx.font = `700 28px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  ctx.textAlign = "right";
+  ctx.fillText(GOA_DEST_IATA, endX + 64, baseY);
+
+  drawMechaPalm(ctx, endX + 28, y + 8, 0.55);
+}
+
+function drawPerforation(
+  ctx: CanvasRenderingContext2D,
+  y: number,
+  left: number,
+  right: number,
+) {
+  const r = 7;
+  ctx.fillStyle = GREEN_DEEP;
+  for (let x = left + 18; x < right - 10; x += 22) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function canvasToJpeg(canvas: HTMLCanvasElement): Promise<Blob> {
@@ -303,6 +233,7 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
   const title = pickBuilderTitle(name, serial);
   const displayName = name.trim().toUpperCase() || "BUILDER";
   const displayRole = role.trim().toUpperCase() || "BUILDER";
+  const serialMark = serial.replace(/^HH-GOA-/, "");
 
   const canvas = document.createElement("canvas");
   canvas.width = ID_WIDTH;
@@ -310,167 +241,181 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D canvas unavailable");
 
-  // Thick green outer frame
-  ctx.fillStyle = GREEN;
-  ctx.fillRect(0, 0, ID_WIDTH, ID_HEIGHT);
+  const stubH = Math.round(ID_HEIGHT * 0.22);
+  const bodyH = ID_HEIGHT - stubH;
 
-  const margin = 18;
-  const pageX = margin;
-  const pageY = margin;
-  const pageW = ID_WIDTH - margin * 2;
-  const pageH = ID_HEIGHT - margin * 2;
+  // Full-bleed photo body
+  ctx.fillStyle = GREEN_DEEP;
+  ctx.fillRect(0, 0, ID_WIDTH, bodyH);
+  coverRect(ctx, photo, 0, 0, ID_WIDTH, bodyH);
 
-  ctx.fillStyle = PAPER;
-  ctx.fillRect(pageX, pageY, pageW, pageH);
-  drawHalftoneGrid(ctx, pageX, pageY, pageW, pageH);
+  // Dark gradient for typography legibility
+  const fade = ctx.createLinearGradient(0, bodyH * 0.35, 0, bodyH);
+  fade.addColorStop(0, "rgba(8,56,33,0)");
+  fade.addColorStop(0.45, "rgba(8,56,33,0.35)");
+  fade.addColorStop(1, "rgba(8,56,33,0.88)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0, ID_WIDTH, bodyH);
 
-  // Hard black inner stroke
-  ctx.strokeStyle = "#111111";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(pageX + 2, pageY + 2, pageW - 4, pageH - 4);
-
-  // Header bar
-  const stripH = 56;
-  ctx.fillStyle = GREEN;
-  ctx.fillRect(pageX, pageY, pageW, stripH);
-
-  ctx.fillStyle = YELLOW;
-  ctx.font = `400 30px "Archivo Black", Impact, sans-serif`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText("HACKER HOUSE", pageX + 28, pageY + stripH / 2);
-
-  ctx.fillStyle = CREAM;
-  ctx.font = `700 15px "DM Sans", system-ui, sans-serif`;
-  ctx.textAlign = "right";
-  ctx.fillText(
-    "HH GOA 2026  //  BUILDER PASSPORT",
-    pageX + pageW - 28,
-    pageY + stripH / 2,
-  );
-
-  ctx.fillStyle = YELLOW;
-  ctx.fillRect(pageX, pageY + stripH, pageW, 5);
-  ctx.fillStyle = MAGENTA;
-  ctx.fillRect(pageX, pageY + stripH + 5, pageW, 5);
-
-  const mrzH = 80;
-  const mrzY = pageY + pageH - mrzH;
-  const bodyTop = pageY + stripH + 22;
-  const bodyBottom = mrzY - 14;
-  const bodyH = bodyBottom - bodyTop;
-
-  // Full-height photo
-  const photoX = pageX + 22;
-  const photoY = bodyTop;
-  const photoH = bodyH;
-  const photoW = Math.round(photoH * 0.72);
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(photoX, photoY, photoW, photoH);
-  coverRect(ctx, photo, photoX, photoY, photoW, photoH);
+  // Outer frame + corner ticks
   ctx.strokeStyle = GREEN;
-  ctx.lineWidth = 5;
-  ctx.strokeRect(photoX, photoY, photoW, photoH);
-  ctx.strokeStyle = "#111111";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(photoX + 4, photoY + 4, photoW - 8, photoH - 8);
-
+  ctx.lineWidth = 16;
+  ctx.strokeRect(8, 8, ID_WIDTH - 16, bodyH - 16);
   ctx.strokeStyle = YELLOW;
-  ctx.lineWidth = 5;
-  const tick = 24;
-  for (const [tx, ty, dx, dy] of [
-    [photoX, photoY, 1, 0],
-    [photoX, photoY, 0, 1],
-    [photoX + photoW, photoY, -1, 0],
-    [photoX + photoW, photoY, 0, 1],
-    [photoX, photoY + photoH, 1, 0],
-    [photoX, photoY + photoH, 0, -1],
-    [photoX + photoW, photoY + photoH, -1, 0],
-    [photoX + photoW, photoY + photoH, 0, -1],
-  ] as const) {
-    ctx.beginPath();
-    ctx.moveTo(tx, ty);
-    ctx.lineTo(tx + dx * tick, ty + dy * tick);
-    ctx.stroke();
-  }
+  ctx.lineWidth = 4;
+  ctx.strokeRect(20, 20, ID_WIDTH - 40, bodyH - 40);
+  drawCornerTicks(ctx, 28, 28, ID_WIDTH - 56, bodyH - 56);
 
-  const contentLeft = photoX + photoW + 36;
-  const contentRight = pageX + pageW - 28;
-  const contentW = contentRight - contentLeft;
-  const flightW = Math.min(440, Math.floor(contentW * 0.5));
-  const flightLeft = contentRight - flightW;
-  const dataW = flightLeft - contentLeft - 20;
+  // Hero serial mark (random Crockford body)
+  ctx.save();
+  ctx.translate(ID_WIDTH * 0.72, bodyH * 0.28);
+  ctx.rotate((-12 * Math.PI) / 180);
+  ctx.font = `900 160px "Archivo Black", Impact, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 16;
+  ctx.strokeStyle = MAGENTA;
+  ctx.strokeText(serialMark, 0, 0);
+  ctx.fillStyle = YELLOW;
+  ctx.fillText(serialMark, 0, 0);
+  ctx.restore();
 
-  drawFlightPath(ctx, origin.iata, flightLeft, bodyTop + 4, flightW);
-
-  let row = bodyTop + 10;
-  fieldLabel(ctx, "Type / Code", contentLeft, row, dataW);
-  fieldValue(ctx, "P / HHG · BUILDER ID", contentLeft, row + 32, dataW, GREEN, 24);
-  row += 74;
-
-  fieldLabel(ctx, "Full name", contentLeft, row, dataW);
-  fieldValue(ctx, displayName, contentLeft, row + 36, dataW, INK, 40);
-  row += 86;
-
-  fieldLabel(ctx, "Stack / role", contentLeft, row, dataW);
-  fieldValue(ctx, displayRole, contentLeft, row + 32, dataW, MAGENTA, 26);
-  row += 74;
-
-  fieldLabel(ctx, "Assigned title", contentLeft, row, dataW);
-  fieldValue(ctx, title, contentLeft, row + 32, dataW, GREEN, 26);
-  row += 80;
-
-  const boxH = 68;
-  const boxY = Math.min(bodyBottom - boxH, Math.max(row + 8, bodyTop + 290));
+  // Event chip top-left
   ctx.fillStyle = GREEN;
-  ctx.fillRect(contentLeft, boxY, contentW, boxH);
+  ctx.fillRect(40, 40, 280, 44);
   ctx.strokeStyle = "#111111";
   ctx.lineWidth = 3;
-  ctx.strokeRect(contentLeft, boxY, contentW, boxH);
+  ctx.strokeRect(40, 40, 280, 44);
   ctx.fillStyle = YELLOW;
-  ctx.fillRect(contentLeft, boxY, 8, boxH);
-
-  ctx.fillStyle = YELLOW;
-  ctx.font = `700 12px "DM Sans", system-ui, sans-serif`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText("DOCUMENT NO.", contentLeft + 22, boxY + 22);
-  ctx.font = `700 26px ui-monospace, SFMono-Regular, Menlo, monospace`;
-  ctx.fillText(serial, contentLeft + 22, boxY + 50);
-
-  ctx.fillStyle = CREAM;
-  ctx.font = `700 12px "DM Sans", system-ui, sans-serif`;
-  ctx.textAlign = "right";
-  ctx.fillText("VALID", contentRight - 18, boxY + 22);
-  ctx.font = `700 22px "DM Sans", system-ui, sans-serif`;
-  ctx.fillText("GOA 2026", contentRight - 18, boxY + 50);
-
-  // MRZ + hatch
-  ctx.fillStyle = CREAM;
-  ctx.fillRect(pageX, mrzY, pageW, mrzH);
-  ctx.fillStyle = GREEN_DEEP;
-  for (let i = 0; i < pageW; i += 4) {
-    ctx.globalAlpha = i % 8 === 0 ? 0.14 : 0.06;
-    ctx.fillRect(pageX + i, mrzY, 2, mrzH);
-  }
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = MAGENTA;
-  ctx.fillRect(pageX, mrzY, pageW, 5);
-
-  const [mrz1, mrz2] = buildMrz(displayName, serial, displayRole);
-  ctx.fillStyle = INK;
-  ctx.font = `700 18px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  ctx.font = `700 18px "DM Sans", system-ui, sans-serif`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(mrz1, pageX + 28, mrzY + 32);
-  ctx.fillText(mrz2, pageX + 28, mrzY + 58);
+  ctx.fillText("HH GOA 2026", 56, 62);
 
-  ctx.fillStyle = MUTED;
-  ctx.font = `700 11px "DM Sans", system-ui, sans-serif`;
+  // Route graphic
+  drawRouteGraphic(ctx, origin.iata, 40, bodyH * 0.42, 420);
+
+  // Name / role poster type
+  const typeMax = ID_WIDTH - 80;
+  ctx.fillStyle = CREAM;
+  const nameSize = fitText(
+    ctx,
+    displayName,
+    typeMax,
+    72,
+    36,
+    `"Archivo Black", Impact, sans-serif`,
+  );
+  ctx.font = `700 ${nameSize}px "Archivo Black", Impact, sans-serif`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText(displayName, 40, bodyH - 150);
+
+  ctx.fillStyle = MAGENTA;
+  const roleSize = fitText(
+    ctx,
+    displayRole,
+    typeMax,
+    36,
+    20,
+    `"DM Sans", system-ui, sans-serif`,
+  );
+  ctx.font = `700 ${roleSize}px "DM Sans", system-ui, sans-serif`;
+  ctx.fillText(displayRole, 40, bodyH - 108);
+
+  // Witty title stamp
+  const stampPadX = 18;
+  ctx.font = `700 26px "DM Sans", system-ui, sans-serif`;
+  const stampW = Math.min(
+    typeMax,
+    ctx.measureText(title).width + stampPadX * 2,
+  );
+  const stampH = 48;
+  const stampX = 40;
+  const stampY = bodyH - 88;
+  ctx.save();
+  ctx.translate(stampX + stampW / 2, stampY + stampH / 2);
+  ctx.rotate((-3 * Math.PI) / 180);
+  ctx.fillStyle = MAGENTA;
+  ctx.fillRect(-stampW / 2, -stampH / 2, stampW, stampH);
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(-stampW / 2, -stampH / 2, stampW, stampH);
+  ctx.fillStyle = CREAM;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(title, 0, 1);
+  ctx.restore();
+
+  // Ticket stub
+  const stubY = bodyH;
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, stubY, ID_WIDTH, stubH);
+  drawHalftoneDots(ctx, 0, stubY, ID_WIDTH, stubH);
+
+  ctx.fillStyle = MAGENTA;
+  ctx.fillRect(0, stubY, ID_WIDTH, 6);
+
+  drawPerforation(ctx, stubY + 2, 0, ID_WIDTH);
+
+  // Stub notch circles (ticket edge)
+  ctx.fillStyle = GREEN_DEEP;
+  ctx.beginPath();
+  ctx.arc(0, stubY + stubH / 2, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(ID_WIDTH, stubY + stubH / 2, 22, 0, Math.PI * 2);
+  ctx.fill();
+
+  const stubMid = stubY + stubH / 2;
+  ctx.fillStyle = GREEN;
+  ctx.font = `700 18px "DM Sans", system-ui, sans-serif`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("HACKER HOUSE GOA", 48, stubMid - 36);
+  ctx.fillStyle = INK;
+  ctx.font = `700 15px "DM Sans", system-ui, sans-serif`;
+  ctx.fillText("OCT 28–31  ·  2026", 48, stubMid - 12);
+
+  ctx.fillStyle = INK;
+  ctx.font = `700 28px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  ctx.textAlign = "center";
+  ctx.fillText(serial, ID_WIDTH / 2, stubMid + 28);
+
+  ctx.fillStyle = GREEN;
+  ctx.font = `900 36px "Archivo Black", Impact, sans-serif`;
   ctx.textAlign = "right";
-  ctx.fillText("#FrameInGoa", pageX + pageW - 24, mrzY + 16);
+  ctx.fillText(serialMark, ID_WIDTH - 48, stubMid - 18);
+
+  ctx.fillStyle = MAGENTA;
+  ctx.font = `700 16px "DM Sans", system-ui, sans-serif`;
+  ctx.fillText("GOI  ·  #FrameInGoa", ID_WIDTH - 48, stubMid + 20);
+
+  // Hard outer stroke
+  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 8;
+  ctx.strokeRect(4, 4, ID_WIDTH - 8, ID_HEIGHT - 8);
 
   return { blob: await canvasToJpeg(canvas), title };
+}
+
+function drawHalftoneDots(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  ctx.fillStyle = "rgba(11,77,44,0.1)";
+  for (let row = 0; row < h; row += 12) {
+    for (let col = 0; col < w; col += 12) {
+      const r = (row + col) % 24 === 0 ? 1.5 : 0.9;
+      ctx.beginPath();
+      ctx.arc(x + col + 2, y + row + 2, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 }
 
 export function blobToPassFile(blob: Blob, serial: string): File {

@@ -32,19 +32,21 @@ export function ShareScreen({
 }: ShareScreenProps) {
   return (
     <div className="flex min-h-dvh flex-col text-[var(--cream)]">
-      <header className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-2">
-        <p className="mecha-title font-[family-name:var(--font-display)] text-lg text-[var(--yellow)]">
+      <header className="flex shrink-0 items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 sm:px-5">
+        <p className="mecha-title font-[family-name:var(--font-display)] text-base text-[var(--yellow)] sm:text-lg">
           HH GOA
         </p>
-        <p className="border-2 border-[var(--magenta)] px-2 py-0.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--magenta)]">
+        <p className="border-2 border-[var(--magenta)] px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--magenta)] sm:text-xs sm:tracking-[0.18em]">
           #FrameInGoa
         </p>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center px-5 py-3">
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-y-auto px-3 py-2 sm:gap-3 sm:px-5 sm:py-3">
         <div
           className={`share-photo-enter mecha-panel relative w-full overflow-hidden bg-[var(--cream)] ${
-            format === "pass" ? "max-w-[min(100%,560px)]" : "max-w-[min(100%,420px)]"
+            format === "pass"
+              ? "max-w-[min(100%,min(420px,90dvw))]"
+              : "max-w-[min(100%,min(420px,85dvw))]"
           }`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -55,38 +57,45 @@ export function ShareScreen({
                 ? "Your HH Goa 2026 Builder ID"
                 : "Your HH Goa 2026 framed photo"
             }
-            className={`w-full object-contain ${format === "pass" ? "aspect-[2/1]" : "aspect-square"}`}
+            className={`mx-auto w-full object-contain ${
+              format === "pass"
+                ? "aspect-[4/5] max-h-[min(52dvh,520px)]"
+                : "aspect-square max-h-[min(48dvh,420px)]"
+            }`}
             draggable={false}
           />
         </div>
 
         {format === "pass" && serial ? (
-          <p className="mt-4 border-2 border-[var(--yellow)] bg-[var(--green-deep)] px-3 py-1 font-mono text-sm font-bold tracking-wider text-[var(--yellow)]">
+          <p className="border-2 border-[var(--yellow)] bg-[var(--green-deep)] px-2.5 py-1 font-mono text-xs font-bold tracking-wider text-[var(--yellow)] sm:px-3 sm:text-sm">
             {serial}
           </p>
         ) : null}
 
         {error ? (
-          <p className="mt-3 max-w-sm text-center text-sm text-[var(--danger)]" role="alert">
+          <p
+            className="max-w-sm px-2 text-center text-sm text-[var(--danger)]"
+            role="alert"
+          >
             {error}
           </p>
         ) : sharing ? (
-          <p className="mt-3 text-sm font-bold text-[var(--yellow)]" aria-live="polite">
+          <p className="text-sm font-bold text-[var(--yellow)]" aria-live="polite">
             Preparing share…
           </p>
         ) : (
-          <p className="mt-3 text-sm font-semibold uppercase tracking-[0.14em] text-[var(--muted-on-green)]">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted-on-green)] sm:text-sm">
             Looks good — send it out
           </p>
         )}
       </main>
 
-      <footer className="px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2">
-        <div className="mecha-panel mx-auto max-w-md bg-[var(--cream)] px-3 py-5 text-[var(--ink)]">
-          <p className="mb-4 text-center text-[0.68rem] font-bold uppercase tracking-[0.22em] text-[var(--ink-soft)]">
+      <footer className="shrink-0 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1 sm:px-4 sm:pt-2">
+        <div className="mecha-panel mx-auto w-full max-w-md bg-[var(--cream)] px-2 py-3 text-[var(--ink)] sm:px-3 sm:py-5">
+          <p className="mb-3 text-center text-[0.62rem] font-bold uppercase tracking-[0.18em] text-[var(--ink-soft)] sm:mb-4 sm:text-[0.68rem] sm:tracking-[0.22em]">
             Share // Control Panel
           </p>
-          <div className="flex items-start justify-evenly gap-1">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <ShareAction
               label={webViewSave ? "Save" : "Download"}
               onClick={onDownload}
@@ -130,7 +139,7 @@ export function ShareScreen({
           type="button"
           onClick={onRetake}
           disabled={sharing}
-          className="mt-4 flex w-full items-center justify-center gap-2 border-2 border-[var(--yellow)] py-3 text-sm font-bold uppercase tracking-[0.12em] text-[var(--yellow)] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 disabled:opacity-40"
+          className="mecha-panel mt-3 flex w-full max-w-md mx-auto items-center justify-center gap-2 bg-transparent py-2.5 text-sm font-bold uppercase tracking-[0.12em] text-[var(--yellow)] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 disabled:opacity-40 sm:mt-4 sm:py-3"
         >
           <RetakeIcon />
           Take again
@@ -168,15 +177,14 @@ function ShareAction({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex w-[5.5rem] flex-col items-center gap-2.5 disabled:opacity-35"
+      className="flex w-full flex-col items-center gap-2 disabled:opacity-35"
     >
       <span
-        className={`flex h-[3.6rem] w-[3.6rem] items-center justify-center border-[3px] border-[var(--black)] shadow-[3px_3px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 ${fill}`}
-        style={{ clipPath: "polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)" }}
+        className={`flex aspect-square w-full max-w-[3.75rem] items-center justify-center border-[3px] border-[var(--black)] shadow-[4px_4px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-[2px_2px_0_0_#111] sm:max-w-[4rem] ${fill}`}
       >
         {children}
       </span>
-      <span className="text-[0.72rem] font-bold uppercase tracking-wide text-[var(--ink-soft)]">
+      <span className="text-[0.65rem] font-bold uppercase tracking-wide text-[var(--ink-soft)] sm:text-[0.72rem]">
         {label}
       </span>
     </button>
