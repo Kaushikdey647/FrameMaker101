@@ -39,9 +39,7 @@ export function LandingScreen({
   const status = converting
     ? "Converting…"
     : busy
-      ? mode === "pass"
-        ? "Building your ID…"
-        : "Framing your photo…"
+      ? "Cooking 5 looks…"
       : null;
 
   const passReady =

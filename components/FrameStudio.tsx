@@ -7,9 +7,11 @@ import { decodePhoto } from "@/lib/decode";
 import { downloadBlob, isInAppWebView } from "@/lib/download";
 import { canShareFiles, shareNative, shareToX } from "@/lib/share";
 import { mintSerial } from "@/lib/serial";
+import { pickFrameThemes, pickIdThemes } from "@/lib/style-kit";
 import type { IndiaAirport } from "@/lib/india-airports";
 import { LandingScreen, type FormatMode } from "./LandingScreen";
 import { ShareScreen } from "./ShareScreen";
+import { StylePicker } from "./StylePicker";
 
 type Ready = {
   blob: Blob;
@@ -22,6 +24,21 @@ type Ready = {
   role?: string;
 };
 
+type StyleVariant = {
+  id: string;
+  name: string;
+  blob: Blob;
+  file: File;
+  previewUrl: string;
+  title?: string;
+};
+
+type Phase = "landing" | "picking" | "share";
+
+function revokeVariants(variants: StyleVariant[]) {
+  for (const v of variants) URL.revokeObjectURL(v.previewUrl);
+}
+
 export function FrameStudio() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -29,7 +46,15 @@ export function FrameStudio() {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [origin, setOrigin] = useState<IndiaAirport | null>(null);
+  const [phase, setPhase] = useState<Phase>("landing");
+  const [variants, setVariants] = useState<StyleVariant[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [ready, setReady] = useState<Ready | null>(null);
+  const [passMeta, setPassMeta] = useState<{
+    serial: string;
+    name: string;
+    role: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [converting, setConverting] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -43,9 +68,13 @@ export function FrameStudio() {
 
   useEffect(() => {
     return () => {
-      if (ready?.previewUrl) URL.revokeObjectURL(ready.previewUrl);
+      revokeVariants(variants);
+      if (ready?.previewUrl && !variants.some((v) => v.previewUrl === ready.previewUrl)) {
+        URL.revokeObjectURL(ready.previewUrl);
+      }
     };
-  }, [ready]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup on unmount only
+  }, []);
 
   async function handleFile(file: File) {
     setError(null);
@@ -58,53 +87,72 @@ export function FrameStudio() {
       setConverting(false);
 
       if (mode === "frame") {
-        const blob = await composeFrame(bitmap);
-        const previewUrl = URL.createObjectURL(blob);
-        setReady((prev) => {
-          if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
-          return {
-            blob,
-            file: blobToFrameFile(blob),
-            previewUrl,
-            format: "frame",
-          };
+        const themes = pickFrameThemes(5);
+        const composed = await Promise.all(
+          themes.map(async (theme) => {
+            const blob = await composeFrame(bitmap!, theme);
+            return {
+              id: theme.id,
+              name: theme.name,
+              blob,
+              file: blobToFrameFile(blob),
+              previewUrl: URL.createObjectURL(blob),
+            } satisfies StyleVariant;
+          }),
+        );
+        setVariants((prev) => {
+          revokeVariants(prev);
+          return composed;
         });
+        setSelectedIndex(0);
+        setPassMeta(null);
+        setReady(null);
+        setPhase("picking");
         return;
       }
 
       if (mode === "pass") {
         if (!origin) throw new Error("Pick the airport you’re flying from");
         const serial = mintSerial();
-        const { blob, title } = await composeBuilderId({
-          photo: bitmap,
-          name: name.trim(),
-          role: role.trim(),
-          serial,
-          origin,
+        const trimmedName = name.trim();
+        const trimmedRole = role.trim();
+        const themes = pickIdThemes(5);
+        const composed = await Promise.all(
+          themes.map(async (theme) => {
+            const { blob, title } = await composeBuilderId({
+              photo: bitmap!,
+              name: trimmedName,
+              role: trimmedRole,
+              serial,
+              origin,
+              theme,
+            });
+            return {
+              id: theme.id,
+              name: theme.name,
+              blob,
+              file: blobToPassFile(blob, serial),
+              previewUrl: URL.createObjectURL(blob),
+              title,
+            } satisfies StyleVariant;
+          }),
+        );
+        setVariants((prev) => {
+          revokeVariants(prev);
+          return composed;
         });
-
-        const previewUrl = URL.createObjectURL(blob);
-        setReady((prev) => {
-          if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
-          return {
-            blob,
-            file: blobToPassFile(blob, serial),
-            previewUrl,
-            format: "pass",
-            serial,
-            title,
-            name: name.trim(),
-            role: role.trim(),
-          };
-        });
+        setSelectedIndex(0);
+        setPassMeta({ serial, name: trimmedName, role: trimmedRole });
+        setReady(null);
+        setPhase("picking");
         return;
       }
 
-      // unreachable — modes are frame | pass
       const _exhaustive: never = mode;
       void _exhaustive;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create that image");
+      setPhase("landing");
     } finally {
       bitmap?.close();
       setBusy(false);
@@ -119,13 +167,36 @@ export function FrameStudio() {
   }
 
   function onRetake() {
-    setReady((prev) => {
-      if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
-      return null;
+    setVariants((prev) => {
+      revokeVariants(prev);
+      return [];
     });
+    setReady(null);
+    setPassMeta(null);
+    setSelectedIndex(0);
+    setPhase("landing");
     setError(null);
     setHint(null);
     setSharing(false);
+  }
+
+  function onConfirmStyle() {
+    const v = variants[selectedIndex];
+    if (!v) return;
+    // Keep all variant URLs alive until retake; share uses selected blob/file.
+    setReady({
+      blob: v.blob,
+      file: v.file,
+      previewUrl: v.previewUrl,
+      format: mode,
+      serial: passMeta?.serial,
+      title: v.title,
+      name: passMeta?.name,
+      role: passMeta?.role,
+    });
+    setPhase("share");
+    setHint(null);
+    setError(null);
   }
 
   function passFilename(readyState: Ready): string {
@@ -208,7 +279,7 @@ export function FrameStudio() {
         onChange={onInputChange}
       />
 
-      {ready ? (
+      {phase === "share" && ready ? (
         <ShareScreen
           previewUrl={ready.previewUrl}
           format={ready.format}
@@ -221,6 +292,15 @@ export function FrameStudio() {
           onDownload={onDownload}
           onShareNative={() => void onShareNative()}
           onShareX={() => void onShareX()}
+          onRetake={onRetake}
+        />
+      ) : phase === "picking" && variants.length > 0 ? (
+        <StylePicker
+          format={mode}
+          variants={variants}
+          selectedIndex={selectedIndex}
+          onSelect={setSelectedIndex}
+          onConfirm={onConfirmStyle}
           onRetake={onRetake}
         />
       ) : (
