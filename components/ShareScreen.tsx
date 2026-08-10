@@ -11,6 +11,7 @@ type ShareScreenProps = {
   webViewSave: boolean;
   sharing: boolean;
   error: string | null;
+  hint: string | null;
   onDownload: () => void;
   onShareNative: () => void;
   onShareX: () => void;
@@ -25,6 +26,7 @@ export function ShareScreen({
   webViewSave,
   sharing,
   error,
+  hint,
   onDownload,
   onShareNative,
   onShareX,
@@ -111,8 +113,8 @@ export function ShareScreen({
               disabled={sharing || !canNativeShare}
               title={
                 canNativeShare
-                  ? "Share to WhatsApp, Instagram, and more"
-                  : "System share isn’t available here"
+                  ? "Share via WhatsApp, Instagram, Files…"
+                  : "System share isn’t available here (needs HTTPS)"
               }
               tone="magenta"
             >
@@ -122,13 +124,24 @@ export function ShareScreen({
               label="X"
               onClick={onShareX}
               disabled={sharing}
-              title="Share to X"
+              title={
+                canNativeShare
+                  ? "Opens share — pick X to attach the image"
+                  : "Opens X; image is copied or downloaded to attach"
+              }
               tone="green"
             >
               <XIcon />
             </ShareAction>
           </div>
-          {webViewSave ? (
+          {hint && !error ? (
+            <p
+              className="mt-3 text-center text-xs font-semibold text-[var(--ink-soft)]"
+              aria-live="polite"
+            >
+              {hint}
+            </p>
+          ) : webViewSave ? (
             <p className="mt-3 text-center text-xs text-[var(--ink-soft)]">
               Long-press the photo to save in this browser
             </p>

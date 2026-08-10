@@ -34,6 +34,7 @@ export function FrameStudio() {
   const [converting, setConverting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [webViewSave, setWebViewSave] = useState(false);
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export function FrameStudio() {
 
   async function handleFile(file: File) {
     setError(null);
+    setHint(null);
     setBusy(true);
     setConverting(false);
     let bitmap: ImageBitmap | null = null;
@@ -122,22 +124,25 @@ export function FrameStudio() {
       return null;
     });
     setError(null);
+    setHint(null);
     setSharing(false);
+  }
+
+  function passFilename(readyState: Ready): string {
+    return readyState.format === "pass" && readyState.serial
+      ? `${readyState.serial}.jpg`
+      : "hh-goa-2026.jpg";
   }
 
   function onDownload() {
     if (!ready || webViewSave) return;
-    downloadBlob(
-      ready.blob,
-      ready.format === "pass" && ready.serial
-        ? `${ready.serial}.jpg`
-        : "hh-goa-2026.jpg",
-    );
+    downloadBlob(ready.blob, passFilename(ready));
   }
 
   async function onShareNative() {
     if (!ready) return;
     setError(null);
+    setHint(null);
     try {
       await shareNative(ready.file, {
         format: ready.format,
@@ -152,18 +157,34 @@ export function FrameStudio() {
     if (!ready) return;
     setSharing(true);
     setError(null);
+    setHint(null);
     try {
       const result = await shareToX(ready.file, {
         format: ready.format,
         serial: ready.serial,
       });
-      if (result === "intent" && !webViewSave) {
-        downloadBlob(
-          ready.blob,
-          ready.format === "pass" && ready.serial
-            ? `${ready.serial}.jpg`
-            : "hh-goa-2026.jpg",
-        );
+
+      switch (result) {
+        case "cancelled":
+          break;
+        case "shared":
+          setHint("Pick X in the share menu so the image is attached");
+          break;
+        case "clipboard-intent":
+          setHint("Image copied — paste it into your X post (⌘V / Ctrl+V)");
+          break;
+        case "intent":
+          if (webViewSave) {
+            setHint("Long-press the photo to save, then attach it in X");
+          } else {
+            downloadBlob(ready.blob, passFilename(ready));
+            setHint("Image saved — attach it in your X post");
+          }
+          break;
+        default: {
+          const _exhaustive: never = result;
+          void _exhaustive;
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Share to X failed");
@@ -199,6 +220,7 @@ export function FrameStudio() {
           webViewSave={webViewSave}
           sharing={sharing}
           error={error}
+          hint={hint}
           onDownload={onDownload}
           onShareNative={() => void onShareNative()}
           onShareX={() => void onShareX()}
