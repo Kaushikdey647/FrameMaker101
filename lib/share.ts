@@ -1,4 +1,5 @@
 import { upload } from "@vercel/blob/client";
+import { passJpgPath } from "@/lib/pass";
 
 export function getAppUrl(): string {
   if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_APP_URL) {
@@ -13,53 +14,81 @@ export function getAppUrl(): string {
   );
 }
 
-export function buildShareCaption(appUrl: string = getAppUrl()): string {
+export function buildShareCaption(opts?: {
+  appUrl?: string;
+  serial?: string;
+  format?: "frame" | "pass";
+}): string {
+  const appUrl = opts?.appUrl ?? getAppUrl();
+  if (opts?.format === "pass" && opts.serial) {
+    return `My HH Goa 2026 Builder ID ${opts.serial} #FrameInGoa\n\nFind it anytime: ${appUrl}/id/${opts.serial}\nMake yours: ${appUrl}`;
+  }
   return `Just framed myself for HH Goa 2026! #FrameInGoa\n\nMake yours: ${appUrl}`;
 }
 
-export type ShareResult =
-  | { mode: "native" }
-  | { mode: "intent" }
-  | { mode: "cancelled" };
-
-/**
- * Gesture-safe share: ready File must already exist (no encode in this call).
- * Native share runs first; fallback opens a blank window sync then uploads.
- */
-export async function shareFramedPhoto(
-  readyFile: File,
-  readyBlob: Blob,
-): Promise<ShareResult> {
-  const appUrl = getAppUrl();
-  const caption = buildShareCaption(appUrl);
-
-  if (
+export function canShareFiles(file: File): boolean {
+  return (
     typeof navigator !== "undefined" &&
     typeof navigator.share === "function" &&
-    navigator.canShare?.({ files: [readyFile] })
-  ) {
-    try {
-      await navigator.share({ files: [readyFile], text: caption });
-      return { mode: "native" };
-    } catch (err) {
-      // User cancel → stop. Other failures fall through to intent.
-      if (err instanceof DOMException && err.name === "AbortError") {
-        return { mode: "cancelled" };
-      }
-    }
+    !!navigator.canShare?.({ files: [file] })
+  );
+}
+
+export async function shareNative(
+  readyFile: File,
+  opts?: { serial?: string; format?: "frame" | "pass" },
+): Promise<"shared" | "cancelled"> {
+  if (!canShareFiles(readyFile)) {
+    throw new Error(
+      "System share isn’t available here. Try Share to X, or download the image.",
+    );
   }
 
-  // Open synchronously so iOS Safari does not popup-block after await.
+  const caption = buildShareCaption(opts);
+  try {
+    await navigator.share({
+      files: [readyFile],
+      text: caption,
+      title: "HH Goa 2026",
+    });
+    return "shared";
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      return "cancelled";
+    }
+    throw err;
+  }
+}
+
+export async function shareToX(
+  readyBlob: Blob,
+  opts?: { serial?: string; format?: "frame" | "pass"; existingImageUrl?: string },
+): Promise<"intent"> {
+  const appUrl = getAppUrl();
+  const caption = buildShareCaption({
+    appUrl,
+    serial: opts?.serial,
+    format: opts?.format,
+  });
   const win = window.open("about:blank", "_blank");
 
   try {
-    const { url: blobUrl } = await upload("frames/hh-goa-2026.jpg", readyBlob, {
-      access: "public",
-      handleUploadUrl: "/api/blob-upload",
-      contentType: "image/jpeg",
-    });
+    let sharePage: string;
+    if (opts?.format === "pass" && opts.serial) {
+      // Pass already stored — point X unfurl at lookup page
+      if (!opts.existingImageUrl) {
+        // Still upload if needed? Prefer lookup URL directly.
+      }
+      sharePage = `${appUrl}/id/${opts.serial}`;
+    } else {
+      const { url: blobUrl } = await upload("frames/hh-goa-2026.jpg", readyBlob, {
+        access: "public",
+        handleUploadUrl: "/api/blob-upload",
+        contentType: "image/jpeg",
+      });
+      sharePage = `${appUrl}/share?img=${encodeURIComponent(blobUrl)}`;
+    }
 
-    const sharePage = `${appUrl}/share?img=${encodeURIComponent(blobUrl)}`;
     const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}&url=${encodeURIComponent(sharePage)}`;
 
     if (win && !win.closed) {
@@ -67,9 +96,18 @@ export async function shareFramedPhoto(
     } else {
       window.location.href = intent;
     }
-    return { mode: "intent" };
+    return "intent";
   } catch (err) {
     if (win && !win.closed) win.close();
     throw err;
   }
+}
+
+export async function uploadPassJpeg(serial: string, blob: Blob): Promise<string> {
+  const { url } = await upload(passJpgPath(serial), blob, {
+    access: "public",
+    handleUploadUrl: "/api/blob-upload",
+    contentType: "image/jpeg",
+  });
+  return url;
 }

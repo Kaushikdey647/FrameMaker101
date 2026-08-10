@@ -1,30 +1,36 @@
 import type { Metadata, Viewport } from "next";
-import { Figtree, Syne } from "next/font/google";
+import { Archivo_Black, DM_Sans, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 
-const figtree = Figtree({
-  variable: "--font-figtree",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
 });
 
-const syne = Syne({
-  variable: "--font-syne",
+const archivoBlack = Archivo_Black({
+  variable: "--font-archivo",
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: "400",
+});
+
+const notoDeva = Noto_Sans_Devanagari({
+  variable: "--font-noto-deva",
+  subsets: ["devanagari"],
+  weight: ["700"],
 });
 
 export const metadata: Metadata = {
-  title: "HH Goa 2026 — Frame yourself",
+  title: "HH Goa 2026 — Frame & Builder ID",
   description:
-    "Upload a photo, get a branded HH Goa 2026 PFP frame, download or share to X with #FrameInGoa.",
+    "Make a branded HH Goa 2026 PFP frame or Builder ID. Share with #FrameInGoa.",
   openGraph: {
-    title: "HH Goa 2026 — Frame yourself",
+    title: "HH Goa 2026 — Frame & Builder ID",
     description: "Make yours with #FrameInGoa",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "HH Goa 2026 — Frame yourself",
+    title: "HH Goa 2026 — Frame & Builder ID",
     description: "Make yours with #FrameInGoa",
   },
 };
@@ -32,17 +38,16 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  // Do not set userScalable: false — a11y
-  themeColor: "#e8f4f2",
+  themeColor: "#0B4D2C",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${figtree.variable} ${syne.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${archivoBlack.variable} ${notoDeva.variable} h-full antialiased`}
     >
-      <body className="min-h-dvh font-sans text-[var(--ink)]">{children}</body>
+      <body className="min-h-dvh font-sans">{children}</body>
     </html>
   );
 }

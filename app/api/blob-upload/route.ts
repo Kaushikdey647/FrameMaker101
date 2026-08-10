@@ -9,16 +9,20 @@ export async function POST(request: Request): Promise<NextResponse> {
       body,
       request,
       onBeforeGenerateToken: async (pathname) => {
-        if (!pathname.startsWith("frames/")) {
-          throw new Error("Invalid upload path");
-        }
+        const ok =
+          pathname.startsWith("frames/") ||
+          (pathname.startsWith("passes/") && pathname.endsWith(".jpg"));
+        if (!ok) throw new Error("Invalid upload path");
+
+        // Exact serial path for passes — no random suffix so /id/[serial] can resolve.
+        const isPass = pathname.startsWith("passes/");
         return {
           allowedContentTypes: ["image/jpeg"],
           maximumSizeInBytes: 5 * 1024 * 1024,
-          addRandomSuffix: true,
+          addRandomSuffix: !isPass,
+          allowOverwrite: isPass,
         };
       },
-      // ponytail: no DB — onUploadCompleted is a no-op; localhost won't receive it anyway
       onUploadCompleted: async () => {},
     });
 

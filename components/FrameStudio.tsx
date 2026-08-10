@@ -1,20 +1,35 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { blobToFrameFile, composeFrame } from "@/lib/compose";
+import { blobToPassFile, composeBuilderId } from "@/lib/compose-id";
 import { decodePhoto } from "@/lib/decode";
 import { downloadBlob, isInAppWebView } from "@/lib/download";
-import { shareFramedPhoto } from "@/lib/share";
-import { ControlTray } from "./ControlTray";
+import { getAppUrl, canShareFiles, shareNative, shareToX, uploadPassJpeg } from "@/lib/share";
+import { normalizeSerial } from "@/lib/serial";
+import { LandingScreen, type FormatMode } from "./LandingScreen";
+import { ShareScreen } from "./ShareScreen";
 
 type Ready = {
   blob: Blob;
   file: File;
   previewUrl: string;
+  format: FormatMode;
+  serial?: string;
+  title?: string;
+  name?: string;
+  role?: string;
+  imageUrl?: string;
 };
 
 export function FrameStudio() {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<FormatMode>("frame");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
   const [ready, setReady] = useState<Ready | null>(null);
   const [busy, setBusy] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -38,14 +53,79 @@ export function FrameStudio() {
     try {
       bitmap = await decodePhoto(file, () => setConverting(true));
       setConverting(false);
-      const blob = await composeFrame(bitmap);
+
+      if (mode === "frame") {
+        const blob = await composeFrame(bitmap);
+        const previewUrl = URL.createObjectURL(blob);
+        setReady((prev) => {
+          if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+          return {
+            blob,
+            file: blobToFrameFile(blob),
+            previewUrl,
+            format: "frame",
+          };
+        });
+        return;
+      }
+
+      const createRes = await fetch("/api/pass/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), role: role.trim() }),
+      });
+      const createJson = (await createRes.json()) as {
+        serial?: string;
+        title?: string;
+        error?: string;
+      };
+      if (!createRes.ok || !createJson.serial || !createJson.title) {
+        throw new Error(createJson.error || "Could not reserve Builder ID");
+      }
+
+      const { serial, title } = createJson;
+      const { blob } = await composeBuilderId({
+        photo: bitmap,
+        name: name.trim(),
+        role: role.trim(),
+        serial,
+      });
+
+      const imageUrl = await uploadPassJpeg(serial, blob);
+      const finalizeRes = await fetch("/api/pass/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serial,
+          name: name.trim(),
+          role: role.trim(),
+          title,
+          imageUrl,
+          createdAt: new Date().toISOString(),
+        }),
+      });
+      if (!finalizeRes.ok) {
+        const fj = (await finalizeRes.json()) as { error?: string };
+        throw new Error(fj.error || "Could not save Builder ID");
+      }
+
       const previewUrl = URL.createObjectURL(blob);
       setReady((prev) => {
         if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
-        return { blob, file: blobToFrameFile(blob), previewUrl };
+        return {
+          blob,
+          file: blobToPassFile(blob, serial),
+          previewUrl,
+          format: "pass",
+          serial,
+          title,
+          name: name.trim(),
+          role: role.trim(),
+          imageUrl,
+        };
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not frame that photo");
+      setError(err instanceof Error ? err.message : "Could not create that image");
     } finally {
       bitmap?.close();
       setBusy(false);
@@ -59,86 +139,124 @@ export function FrameStudio() {
     if (file) void handleFile(file);
   }
 
-  function onDownload() {
-    if (!ready || webViewSave) return;
-    downloadBlob(ready.blob);
+  function onRetake() {
+    setReady((prev) => {
+      if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl);
+      return null;
+    });
+    setError(null);
+    setSharing(false);
   }
 
-  async function onShare() {
+  function onDownload() {
+    if (!ready || webViewSave) return;
+    downloadBlob(
+      ready.blob,
+      ready.format === "pass" && ready.serial
+        ? `${ready.serial}.jpg`
+        : "hh-goa-2026.jpg",
+    );
+  }
+
+  async function onShareNative() {
+    if (!ready) return;
+    setError(null);
+    try {
+      await shareNative(ready.file, {
+        format: ready.format,
+        serial: ready.serial,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Share failed");
+    }
+  }
+
+  async function onShareX() {
     if (!ready) return;
     setSharing(true);
     setError(null);
     try {
-      await shareFramedPhoto(ready.file, ready.blob);
+      await shareToX(ready.blob, {
+        format: ready.format,
+        serial: ready.serial,
+        existingImageUrl: ready.imageUrl,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Share failed");
+      setError(err instanceof Error ? err.message : "Share to X failed");
     } finally {
       setSharing(false);
     }
   }
 
+  async function onCopyLink() {
+    if (!ready?.serial) return;
+    const url = `${getAppUrl()}/id/${ready.serial}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      setError("Could not copy link");
+    }
+  }
+
+  function onLookup(serial: string) {
+    router.push(`/id/${normalizeSerial(serial)}`);
+  }
+
+  const lookupUrl =
+    ready?.format === "pass" && ready.serial
+      ? `${getAppUrl()}/id/${ready.serial}`
+      : undefined;
+
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-2">
-        <p className="font-[family-name:var(--font-display)] text-3xl leading-none tracking-tight text-[var(--ink)] sm:text-4xl">
-          HH Goa 2026
-        </p>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--muted)]">
-          Drop a photo. Get a framed PFP. Share it with #FrameInGoa.
-        </p>
-      </header>
-
-      <main className="flex flex-1 flex-col items-center justify-center px-5 py-4">
-        <div className="relative aspect-square w-full max-w-[min(100%,600px)] overflow-hidden rounded-2xl bg-[var(--frame-well)] shadow-[0_20px_50px_-28px_rgba(8,40,44,0.55)] ring-1 ring-[var(--line)]">
-          {ready ? (
-            // eslint-disable-next-line @next/next/no-img-element -- object URL preview
-            <img
-              src={ready.previewUrl}
-              alt="Your HH Goa 2026 framed photo"
-              className="h-full w-full object-contain"
-              draggable={false}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              disabled={busy}
-              className="flex h-full w-full flex-col items-center justify-center gap-3 px-8 text-center"
-            >
-              <span className="font-[family-name:var(--font-display)] text-2xl text-[var(--ink)]">
-                Your frame awaits
-              </span>
-              <span className="text-sm text-[var(--muted)]">
-                JPG, PNG, or HEIC · processed on your device
-              </span>
-            </button>
-          )}
-        </div>
-        {error ? (
-          <p className="mt-3 max-w-md text-center text-sm text-[var(--danger)]" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </main>
-
+    <>
       <input
-        ref={inputRef}
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        onChange={onInputChange}
+      />
+      <input
+        ref={galleryRef}
         type="file"
         accept="image/*,.heic,.heif,image/heic,image/heif"
         className="sr-only"
         onChange={onInputChange}
       />
 
-      <ControlTray
-        onPickPhoto={() => inputRef.current?.click()}
-        onDownload={onDownload}
-        onShare={() => void onShare()}
-        hasResult={Boolean(ready)}
-        busy={busy}
-        converting={converting}
-        sharing={sharing}
-        webViewSave={webViewSave}
-      />
-    </div>
+      {ready ? (
+        <ShareScreen
+          previewUrl={ready.previewUrl}
+          format={ready.format}
+          serial={ready.serial}
+          lookupUrl={lookupUrl}
+          canNativeShare={canShareFiles(ready.file)}
+          webViewSave={webViewSave}
+          sharing={sharing}
+          error={error}
+          onDownload={onDownload}
+          onShareNative={() => void onShareNative()}
+          onShareX={() => void onShareX()}
+          onRetake={onRetake}
+          onCopyLink={() => void onCopyLink()}
+        />
+      ) : (
+        <LandingScreen
+          mode={mode}
+          onModeChange={setMode}
+          name={name}
+          role={role}
+          onNameChange={setName}
+          onRoleChange={setRole}
+          busy={busy}
+          converting={converting}
+          error={error}
+          onCamera={() => cameraRef.current?.click()}
+          onGallery={() => galleryRef.current?.click()}
+          onLookup={onLookup}
+        />
+      )}
+    </>
   );
 }

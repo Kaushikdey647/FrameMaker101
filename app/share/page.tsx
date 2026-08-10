@@ -54,15 +54,15 @@ export default async function SharePage({ searchParams }: PageProps) {
   const allowed = img && isAllowedShareImageUrl(img) ? img : null;
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-5 py-10">
-      <p className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-[var(--ink)]">
-        HH Goa 2026
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--green)] px-5 py-10 text-[var(--cream)]">
+      <p className="font-[family-name:var(--font-display)] text-3xl tracking-tight text-[var(--yellow)]">
+        HH GOA 2026
       </p>
-      <p className="mt-2 text-sm text-[var(--muted)]">Framed with #FrameInGoa</p>
+      <p className="mt-2 text-sm text-[var(--magenta)]">Framed with #FrameInGoa</p>
 
-      <div className="mt-8 aspect-square w-full max-w-[min(100%,520px)] overflow-hidden rounded-2xl bg-[var(--frame-well)] ring-1 ring-[var(--line)]">
+      <div className="mt-8 aspect-square w-full max-w-[min(100%,520px)] overflow-hidden rounded-2xl bg-[var(--cream)] ring-1 ring-black/10">
         {allowed ? (
-          // eslint-disable-next-line @next/next/no-img-element -- remote blob URL
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={allowed}
             alt="Shared HH Goa 2026 framed photo"
@@ -71,7 +71,7 @@ export default async function SharePage({ searchParams }: PageProps) {
             height={1200}
           />
         ) : (
-          <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[var(--muted)]">
+          <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[var(--ink-soft)]">
             This share link is missing a valid image.
           </div>
         )}
@@ -79,7 +79,7 @@ export default async function SharePage({ searchParams }: PageProps) {
 
       <Link
         href="/"
-        className="mt-8 flex h-12 items-center justify-center rounded-xl bg-[var(--accent)] px-8 text-sm font-semibold text-[var(--accent-fg)]"
+        className="mt-8 flex h-12 items-center justify-center rounded-full bg-[var(--magenta)] px-8 text-sm font-bold text-white"
       >
         Make yours
       </Link>
