@@ -49,7 +49,7 @@ export function StylePicker({
               alt={selected.name}
               className={`mx-auto w-full object-contain ${
                 format === "pass"
-                  ? "aspect-[4/5] max-h-[min(48dvh,480px)]"
+                  ? "aspect-[263/388] max-h-[min(52dvh,560px)]"
                   : "aspect-square max-h-[min(48dvh,420px)]"
               }`}
               draggable={false}
@@ -78,7 +78,7 @@ export function StylePicker({
                     active
                       ? "shadow-[3px_3px_0_0_#F5C518]"
                       : "shadow-[3px_3px_0_0_#111] opacity-80"
-                  } ${format === "pass" ? "aspect-[4/5]" : "aspect-square"}`}
+                  } ${format === "pass" ? "aspect-[263/388]" : "aspect-square"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img

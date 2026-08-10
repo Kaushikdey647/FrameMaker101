@@ -39,38 +39,17 @@ export type FrameTheme = {
   diamonds: boolean;
 };
 
-export type IdLayout =
-  | "posterStub"
-  | "boardingPass"
-  | "manifest"
-  | "arrivalGate"
-  | "lanyard"
-  | "coastline";
-export type IdPhotoTreatment = "clean" | "greenWash" | "halftoneEdge";
-export type IdAccentRail = "magenta" | "yellow" | "dual";
-export type IdTitleMark = "none" | "wordmarkSVG" | "textChip";
-export type IdStub = "paper" | "green" | "magenta";
-export type RouteMotif =
-  | "boardingStrip"
-  | "splitFlap"
-  | "coastCrest"
-  | "tapeSlash"
-  | "radarHop";
-export type IdNameBlock = "bottomLeft" | "centerStack" | "stubOnlyName" | "badgeStack";
-export type IdStampTitle = "magentaBar" | "yellowOutline" | "creamChip" | "flapCell";
-
+/** Colorway only — one shared ID layout. */
 export type IdTheme = {
   id: string;
   name: string;
-  layout: IdLayout;
-  photoTreatment: IdPhotoTreatment;
-  accentRail: IdAccentRail;
-  titleMark: IdTitleMark;
-  stub: IdStub;
-  routeMotif: RouteMotif;
-  nameBlock: IdNameBlock;
-  stampTitle: IdStampTitle;
-  stubHRatio: number;
+  bg: string;
+  stage: string;
+  accent: string;
+  ink: string;
+  muted: string;
+  footer: string;
+  footerInk: string;
 };
 
 /** Each theme uses a unique frameLayout. */
@@ -143,85 +122,73 @@ export const FRAME_THEMES: readonly FrameTheme[] = [
   },
 ] as const;
 
-/** Each theme uses a unique layout + distinct routeMotif. */
+/** Same layout; only fills change. */
 export const ID_THEMES: readonly IdTheme[] = [
   {
-    id: "poster-stub",
-    name: "Poster Stub",
-    layout: "posterStub",
-    photoTreatment: "clean",
-    accentRail: "magenta",
-    titleMark: "textChip",
-    stub: "paper",
-    routeMotif: "boardingStrip",
-    nameBlock: "bottomLeft",
-    stampTitle: "magentaBar",
-    stubHRatio: 0.2,
+    id: "forest",
+    name: "Forest",
+    bg: BRAND.green,
+    stage: BRAND.cream,
+    accent: BRAND.magenta,
+    ink: BRAND.green,
+    muted: "rgba(11,77,44,0.65)",
+    footer: BRAND.deep,
+    footerInk: BRAND.cream,
   },
   {
-    id: "boarding-pass",
-    name: "Boarding Pass",
-    layout: "boardingPass",
-    photoTreatment: "clean",
-    accentRail: "dual",
-    titleMark: "textChip",
-    stub: "paper",
-    routeMotif: "boardingStrip",
-    nameBlock: "bottomLeft",
-    stampTitle: "creamChip",
-    stubHRatio: 0.14,
+    id: "midnight",
+    name: "Midnight",
+    bg: BRAND.deep,
+    stage: BRAND.paper,
+    accent: BRAND.yellow,
+    ink: BRAND.deep,
+    muted: "rgba(8,56,33,0.65)",
+    footer: BRAND.green,
+    footerInk: BRAND.yellow,
   },
   {
-    id: "manifest",
-    name: "Flight Manifest",
-    layout: "manifest",
-    photoTreatment: "greenWash",
-    accentRail: "magenta",
-    titleMark: "none",
-    stub: "paper",
-    routeMotif: "tapeSlash",
-    nameBlock: "bottomLeft",
-    stampTitle: "yellowOutline",
-    stubHRatio: 0.18,
+    id: "cream-pass",
+    name: "Cream Pass",
+    bg: BRAND.green,
+    stage: BRAND.paper,
+    accent: BRAND.magenta,
+    ink: BRAND.ink,
+    muted: "rgba(26,26,26,0.55)",
+    footer: BRAND.deep,
+    footerInk: BRAND.cream,
   },
   {
-    id: "arrival-gate",
-    name: "Arrival Gate",
-    layout: "arrivalGate",
-    photoTreatment: "clean",
-    accentRail: "yellow",
-    titleMark: "wordmarkSVG",
-    stub: "green",
-    routeMotif: "splitFlap",
-    nameBlock: "bottomLeft",
-    stampTitle: "flapCell",
-    stubHRatio: 0.18,
+    id: "sun-stamp",
+    name: "Sun Stamp",
+    bg: BRAND.green,
+    stage: BRAND.cream,
+    accent: BRAND.yellow,
+    ink: BRAND.deep,
+    muted: "rgba(8,56,33,0.6)",
+    footer: BRAND.deep,
+    footerInk: BRAND.yellow,
   },
   {
-    id: "lanyard",
-    name: "Lanyard Pass",
-    layout: "lanyard",
-    photoTreatment: "clean",
-    accentRail: "magenta",
-    titleMark: "textChip",
-    stub: "paper",
-    routeMotif: "radarHop",
-    nameBlock: "badgeStack",
-    stampTitle: "magentaBar",
-    stubHRatio: 0.12,
+    id: "magenta-field",
+    name: "Magenta Field",
+    bg: BRAND.magenta,
+    stage: BRAND.cream,
+    accent: BRAND.yellow,
+    ink: BRAND.green,
+    muted: "rgba(11,77,44,0.6)",
+    footer: BRAND.deep,
+    footerInk: BRAND.cream,
   },
   {
-    id: "coastline",
-    name: "Coastline",
-    layout: "coastline",
-    photoTreatment: "halftoneEdge",
-    accentRail: "yellow",
-    titleMark: "none",
-    stub: "green",
-    routeMotif: "coastCrest",
-    nameBlock: "stubOnlyName",
-    stampTitle: "creamChip",
-    stubHRatio: 0.2,
+    id: "deep-ring",
+    name: "Deep Ring",
+    bg: BRAND.deep,
+    stage: BRAND.cream,
+    accent: BRAND.magenta,
+    ink: BRAND.ink,
+    muted: "rgba(26,26,26,0.55)",
+    footer: BRAND.magenta,
+    footerInk: BRAND.cream,
   },
 ] as const;
 

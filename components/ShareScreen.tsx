@@ -61,7 +61,7 @@ export function ShareScreen({
             }
             className={`mx-auto w-full object-contain ${
               format === "pass"
-                ? "aspect-[4/5] max-h-[min(52dvh,520px)]"
+                ? "aspect-[263/388] max-h-[min(56dvh,580px)]"
                 : "aspect-square max-h-[min(48dvh,420px)]"
             }`}
             draggable={false}
