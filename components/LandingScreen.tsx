@@ -54,24 +54,20 @@ export function LandingScreen({
           Frame In Goa
         </p>
 
-        <div className="relative mt-4 max-w-full sm:mt-6">
-          <h1 className="mecha-title font-[family-name:var(--font-display)] text-[clamp(2.2rem,10vw,4.25rem)] leading-[0.88] text-[var(--yellow)]">
-            HACKER
-            <br />
-            HOUSE
-          </h1>
-          <span
-            className="absolute -right-2 top-[40%] rotate-[-8deg] border-[3px] border-[var(--black)] bg-[var(--magenta)] px-2.5 py-1 font-[family-name:var(--font-deva)] text-lg font-bold text-white shadow-[3px_3px_0_0_#111] sm:text-xl"
-            aria-hidden
-          >
-            गोवा
-          </span>
-          <div className="mx-auto mt-3 h-1 w-24 bg-[var(--yellow)]" />
-          <div className="mx-auto mt-1 h-1 w-16 bg-[var(--magenta)]" />
+        <div className="relative mt-4 w-full max-w-[min(17.5rem,82vw)] sm:mt-6 sm:max-w-[18.5rem]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/assets/title-transparent.svg"
+            alt="Hacker House Goa"
+            className="mx-auto h-auto w-full"
+            width={291}
+            height={255}
+            draggable={false}
+          />
         </div>
 
         <p className="mt-4 text-sm font-bold tracking-[0.2em] text-[var(--yellow)]">
-          GOA · #FrameInGoa
+          #FrameInGoa
         </p>
         <p className="mt-3 max-w-[18rem] text-sm leading-relaxed text-[var(--muted-on-green)]">
           Profile frame or Builder ID — snap, brand, share.
