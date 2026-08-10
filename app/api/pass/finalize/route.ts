@@ -4,7 +4,9 @@ import { passJsonPath, type PassRecord } from "@/lib/pass";
 import { isValidSerial, normalizeSerial } from "@/lib/serial";
 
 export async function POST(request: Request): Promise<NextResponse> {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  const hasOidc =
+    process.env.BLOB_STORE_ID?.trim() && process.env.VERCEL_OIDC_TOKEN?.trim();
+  if (!hasOidc && !process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
     return NextResponse.json({ error: "Blob storage is not configured" }, { status: 503 });
   }
 

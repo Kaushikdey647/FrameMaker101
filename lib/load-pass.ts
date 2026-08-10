@@ -8,7 +8,10 @@ export async function loadPass(serialRaw: string): Promise<{
 } | null> {
   const serial = normalizeSerial(serialRaw);
   if (!isValidSerial(serial)) return null;
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+
+  const hasOidc =
+    process.env.BLOB_STORE_ID?.trim() && process.env.VERCEL_OIDC_TOKEN?.trim();
+  if (!hasOidc && !process.env.BLOB_READ_WRITE_TOKEN?.trim()) return null;
 
   try {
     const [jsonMeta, jpgMeta] = await Promise.all([

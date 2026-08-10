@@ -1,4 +1,4 @@
-import { upload } from "@vercel/blob/client";
+import { uploadPresigned } from "@vercel/blob/client";
 import { passJpgPath } from "@/lib/pass";
 
 export function getAppUrl(): string {
@@ -81,11 +81,27 @@ export async function shareToX(
       }
       sharePage = `${appUrl}/id/${opts.serial}`;
     } else {
-      const { url: blobUrl } = await upload("frames/hh-goa-2026.jpg", readyBlob, {
-        access: "public",
-        handleUploadUrl: "/api/blob-upload",
-        contentType: "image/jpeg",
-      });
+      let blobUrl: string;
+      try {
+        const uploaded = await uploadPresigned(
+          "frames/hh-goa-2026.jpg",
+          readyBlob,
+          {
+            access: "public",
+            handleUploadUrl: "/api/blob-upload",
+            contentType: "image/jpeg",
+          },
+        );
+        blobUrl = uploaded.url;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Upload failed";
+        if (/client token|presigned|BLOB_|503|OIDC/i.test(msg)) {
+          throw new Error(
+            "Share to X needs Blob OIDC env (BLOB_STORE_ID, VERCEL_OIDC_TOKEN, BLOB_WEBHOOK_PUBLIC_KEY). Run npx vercel env pull, then restart the dev server.",
+          );
+        }
+        throw err;
+      }
       sharePage = `${appUrl}/share?img=${encodeURIComponent(blobUrl)}`;
     }
 
@@ -104,7 +120,7 @@ export async function shareToX(
 }
 
 export async function uploadPassJpeg(serial: string, blob: Blob): Promise<string> {
-  const { url } = await upload(passJpgPath(serial), blob, {
+  const { url } = await uploadPresigned(passJpgPath(serial), blob, {
     access: "public",
     handleUploadUrl: "/api/blob-upload",
     contentType: "image/jpeg",

@@ -9,10 +9,19 @@ type Body = {
   role?: string;
 };
 
+function hasOidcBlobAuth(): boolean {
+  return Boolean(
+    process.env.BLOB_STORE_ID?.trim() && process.env.VERCEL_OIDC_TOKEN?.trim(),
+  );
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!hasOidcBlobAuth() && !process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
     return NextResponse.json(
-      { error: "Blob storage is not configured (missing BLOB_READ_WRITE_TOKEN)" },
+      {
+        error:
+          "Blob auth missing. Set BLOB_STORE_ID + VERCEL_OIDC_TOKEN (or BLOB_READ_WRITE_TOKEN) in .env.local.",
+      },
       { status: 503 },
     );
   }
