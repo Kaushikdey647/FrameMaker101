@@ -233,7 +233,6 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
   const title = pickBuilderTitle(name, serial);
   const displayName = name.trim().toUpperCase() || "BUILDER";
   const displayRole = role.trim().toUpperCase() || "BUILDER";
-  const serialMark = serial.replace(/^HH-GOA-/, "");
 
   const canvas = document.createElement("canvas");
   canvas.width = ID_WIDTH;
@@ -265,21 +264,6 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
   ctx.lineWidth = 4;
   ctx.strokeRect(20, 20, ID_WIDTH - 40, bodyH - 40);
   drawCornerTicks(ctx, 28, 28, ID_WIDTH - 56, bodyH - 56);
-
-  // Hero serial mark (random Crockford body)
-  ctx.save();
-  ctx.translate(ID_WIDTH * 0.72, bodyH * 0.28);
-  ctx.rotate((-12 * Math.PI) / 180);
-  ctx.font = `900 160px "Archivo Black", Impact, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.lineJoin = "round";
-  ctx.lineWidth = 16;
-  ctx.strokeStyle = MAGENTA;
-  ctx.strokeText(serialMark, 0, 0);
-  ctx.fillStyle = YELLOW;
-  ctx.fillText(serialMark, 0, 0);
-  ctx.restore();
 
   // Event chip top-left
   ctx.fillStyle = GREEN;
@@ -334,19 +318,15 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
   const stampH = 48;
   const stampX = 40;
   const stampY = bodyH - 88;
-  ctx.save();
-  ctx.translate(stampX + stampW / 2, stampY + stampH / 2);
-  ctx.rotate((-3 * Math.PI) / 180);
   ctx.fillStyle = MAGENTA;
-  ctx.fillRect(-stampW / 2, -stampH / 2, stampW, stampH);
+  ctx.fillRect(stampX, stampY, stampW, stampH);
   ctx.strokeStyle = "#111111";
   ctx.lineWidth = 3;
-  ctx.strokeRect(-stampW / 2, -stampH / 2, stampW, stampH);
+  ctx.strokeRect(stampX, stampY, stampW, stampH);
   ctx.fillStyle = CREAM;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(title, 0, 1);
-  ctx.restore();
+  ctx.fillText(title, stampX + stampW / 2, stampY + stampH / 2 + 1);
 
   // Ticket stub
   const stubY = bodyH;
@@ -383,14 +363,10 @@ export async function composeBuilderId(input: ComposeIdInput): Promise<{
   ctx.textAlign = "center";
   ctx.fillText(serial, ID_WIDTH / 2, stubMid + 28);
 
-  ctx.fillStyle = GREEN;
-  ctx.font = `900 36px "Archivo Black", Impact, sans-serif`;
-  ctx.textAlign = "right";
-  ctx.fillText(serialMark, ID_WIDTH - 48, stubMid - 18);
-
   ctx.fillStyle = MAGENTA;
   ctx.font = `700 16px "DM Sans", system-ui, sans-serif`;
-  ctx.fillText("GOI  ·  #FrameInGoa", ID_WIDTH - 48, stubMid + 20);
+  ctx.textAlign = "right";
+  ctx.fillText("GOI  ·  #FrameInGoa", ID_WIDTH - 48, stubMid + 8);
 
   // Hard outer stroke
   ctx.strokeStyle = "#111111";
