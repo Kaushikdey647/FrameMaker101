@@ -1,6 +1,7 @@
 import { JPEG_QUALITY } from "./compose";
 import { pickBuilderTitle } from "./builder-titles";
-import { type IndiaAirport } from "./india-airports";
+import { drawPalmHorizon, drawPlane } from "./goa-motifs";
+import { GOA_DEST_IATA, type IndiaAirport } from "./india-airports";
 import { BRAND, ID_THEMES, type IdTheme } from "./style-kit";
 
 /** Standard credential ratio 2.63 × 3.88. */
@@ -188,6 +189,51 @@ function drawCenteredName(
   return s1 + s2 * 0.95;
 }
 
+function drawRouteStrip(
+  ctx: CanvasRenderingContext2D,
+  origin: IndiaAirport,
+  cx: number,
+  y: number,
+  maxW: number,
+  theme: IdTheme,
+) {
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+
+  if (origin.iata === GOA_DEST_IATA) {
+    ctx.fillStyle = CREAM;
+    ctx.font = `700 44px ${FONT_DISPLAY}`;
+    ctx.fillText("LOCAL · GOA", cx, y);
+    return;
+  }
+
+  const codeX = maxW / 2 - 78;
+  ctx.fillStyle = CREAM;
+  ctx.font = `700 44px ${FONT_DISPLAY}`;
+  ctx.fillText(origin.iata, cx - codeX, y);
+  ctx.fillText(GOA_DEST_IATA, cx + codeX, y);
+
+  ctx.fillStyle = "rgba(247,241,230,0.7)";
+  ctx.font = `700 20px ${FONT_UI}`;
+  ctx.fillText(origin.city.slice(0, 14), cx - codeX, y + 30);
+  ctx.fillText("Goa", cx + codeX, y + 30);
+
+  const arcFrom = cx - codeX + 74;
+  const arcTo = cx + codeX - 74;
+  const apexY = y - 60;
+  ctx.save();
+  ctx.setLineDash([10, 10]);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = hexToRgba(BRAND.cream, 0.55);
+  ctx.beginPath();
+  ctx.moveTo(arcFrom, y - 14);
+  ctx.quadraticCurveTo((arcFrom + arcTo) / 2, apexY - 32, arcTo, y - 14);
+  ctx.stroke();
+  ctx.restore();
+
+  drawPlane(ctx, (arcFrom + arcTo) / 2, apexY - 9, 46, 0, theme.accent);
+}
+
 function drawBuilderId(
   ctx: CanvasRenderingContext2D,
   input: ComposeIdInput,
@@ -237,8 +283,13 @@ function drawBuilderId(
   ctx.fillText(tagLabel, cx, ly + tagH / 2 + 1);
 
   const footerY = ID_HEIGHT - FOOTER_H / 2;
+  const ruleY = footerY - FOOTER_H / 2 - 28;
+
+  drawPalmHorizon(ctx, PAD, ruleY, maxW, hexToRgba(BRAND.deep, 0.55));
+  drawRouteStrip(ctx, input.origin, cx, ruleY - 97, maxW, theme);
+
   ctx.fillStyle = "rgba(247,241,230,0.28)";
-  ctx.fillRect(PAD, footerY - FOOTER_H / 2 - 28, maxW, 2);
+  ctx.fillRect(PAD, ruleY, maxW, 2);
 
   ctx.fillStyle = CREAM;
   ctx.font = `700 24px ${FONT_UI}`;

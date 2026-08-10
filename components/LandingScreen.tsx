@@ -246,52 +246,53 @@ function ModeChip({
   );
 }
 
-/** Angular sun + palm silhouettes — static paths for hydration safety. */
+/** Goa sunset — striped sun, palms, surf. Static paths for hydration safety. */
 function MechaPosterMark() {
   return (
-    <svg
-      width="240"
-      height="88"
-      viewBox="0 0 240 88"
-      fill="none"
-      aria-hidden
-    >
-      {/* Halftone band */}
-      {Array.from({ length: 18 }).map((_, i) => (
-        <circle
-          key={i}
-          cx={20 + i * 12}
-          cy={78}
-          r={i % 2 === 0 ? 2.2 : 1.4}
-          fill="#F5C518"
-          opacity={0.55}
-        />
-      ))}
-      {/* Angular sun */}
-      <polygon
-        points="120,18 126,34 144,34 130,44 136,60 120,50 104,60 110,44 96,34 114,34"
-        fill="#F5C518"
-        stroke="#083821"
-        strokeWidth="3"
-        strokeLinejoin="miter"
-      />
-      {/* Left palm — angular */}
+    <svg width="240" height="88" viewBox="0 0 240 88" fill="none" aria-hidden>
+      <path d="M94 66 A26 26 0 0 1 146 66 Z" fill="var(--yellow)" />
+      <rect x="92" y="53" width="56" height="3" fill="var(--green)" />
+      <rect x="92" y="58.5" width="56" height="3.5" fill="var(--green)" />
+      <rect x="92" y="63.5" width="56" height="3" fill="var(--green)" />
+
       <path
-        d="M42 78 L38 42 L28 18 M38 42 L18 28 M38 42 L22 48 M38 42 L48 22 M38 42 L56 36"
-        stroke="#F7F1E6"
-        strokeWidth="4"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
+        d="M88 24 q5 -4 10 0 M142 18 q5 -4 10 0"
+        stroke="var(--cream)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        opacity="0.7"
       />
-      {/* Right palm */}
+
+      <PosterPalm />
+      <g transform="translate(240,0) scale(-1,1)">
+        <PosterPalm />
+      </g>
+
+      <rect x="16" y="66" width="208" height="4" fill="var(--magenta)" />
+
       <path
-        d="M198 78 L202 42 L212 18 M202 42 L222 28 M202 42 L218 48 M202 42 L192 22 M202 42 L184 36"
-        stroke="#F7F1E6"
-        strokeWidth="4"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
+        d="M74 77 q9 -4 18 0 t18 0 t18 0 t18 0 M84 83 q9 -4 18 0 t18 0 t18 0"
+        stroke="var(--cream)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        opacity="0.45"
       />
-      <rect x="70" y="70" width="100" height="6" fill="#FF2D8A" />
     </svg>
+  );
+}
+
+/** Single leaning palm rooted at the horizon; mirrored for the right side. */
+function PosterPalm() {
+  return (
+    <g fill="var(--cream)">
+      <path d="M40 66 Q44 50 51 30 L56 31 Q47 50 45 66 Z" />
+      <path d="M54 30 Q40 18 24 20 Q40 24 54 34 Z" />
+      <path d="M54 30 Q42 27 29 36 Q42 31 54 35 Z" />
+      <path d="M54 30 Q51 16 60 6 Q57 19 57 31 Z" />
+      <path d="M54 30 Q68 18 83 22 Q68 24 55 34 Z" />
+      <path d="M54 30 Q69 29 80 39 Q66 33 54 35 Z" />
+      <circle cx="51" cy="34" r="2" />
+      <circle cx="58" cy="34.5" r="2" />
+    </g>
   );
 }

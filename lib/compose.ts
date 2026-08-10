@@ -1,3 +1,4 @@
+import { drawPalmHorizon } from "./goa-motifs";
 import {
   BRAND,
   type FrameTheme,
@@ -176,6 +177,10 @@ function drawBg(ctx: CanvasRenderingContext2D, theme: FrameTheme, size: number) 
       void _e;
     }
   }
+
+  const palmFill =
+    theme.bg === "creamHalftone" ? "rgba(11,77,44,0.12)" : "rgba(8,56,33,0.4)";
+  drawPalmHorizon(ctx, 40, size - 30, size - 80, palmFill, 0.035);
 }
 
 function clipPhotoCircle(
