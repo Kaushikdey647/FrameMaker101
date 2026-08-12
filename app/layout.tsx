@@ -100,7 +100,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${dmSans.variable} ${archivoBlack.variable} ${notoDeva.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${archivoBlack.variable} ${notoDeva.variable} min-h-full antialiased`}
     >
       <head>
         <script

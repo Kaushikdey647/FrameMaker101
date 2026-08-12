@@ -233,12 +233,15 @@ export function FrameStudio() {
         case "shared":
           setHint("Tap X in the list to post with your photo");
           break;
+        case "intent-clipboard":
+          setHint("X opened — paste your photo (Ctrl+V / ⌘V) to attach it");
+          break;
         case "intent":
           if (webViewSave) {
             setHint("Long-press the photo to save, then attach it in X");
           } else {
             downloadBlob(ready.blob, passFilename(ready));
-            setHint("Photo saved — attach it in your X post");
+            setHint("Photo saved — open the X tab and attach it");
           }
           break;
         default: {

@@ -41,19 +41,12 @@ export function LandingScreen({
   const onPhotoFileRef = useRef(onPhotoFile);
   onPhotoFileRef.current = onPhotoFile;
 
-  const status = converting
-    ? "Converting…"
-    : busy
-      ? "Cooking 5 looks…"
-      : null;
-
-  const passReady =
-    name.trim().length >= 2 && role.trim().length >= 1 && origin !== null;
+  const status = converting ? "Converting…" : busy ? "Cooking 5 looks…" : null;
+  const passReady = name.trim().length >= 2 && role.trim().length >= 1 && origin !== null;
   const pickDisabled = busy || (mode === "pass" && !passReady);
 
   function takeFile(input: HTMLInputElement) {
     const file = input.files?.[0];
-    // Allow re-picking the same file on next open (iOS keeps last path).
     input.value = "";
     if (file) onPhotoFileRef.current(file);
   }
@@ -89,13 +82,18 @@ export function LandingScreen({
   }, []);
 
   return (
-    <div className="relative flex min-h-dvh flex-col">
-      <header className="land-in relative z-10 flex flex-1 flex-col items-center overflow-y-auto px-4 pb-4 pt-[max(1.5rem,env(safe-area-inset-top))] text-center sm:px-5 sm:pb-6 sm:pt-[max(2.5rem,env(safe-area-inset-top))]">
+    // Two-column in landscape (mobile + desktop) via flex-row
+    <div className="relative flex min-h-dvh flex-col overflow-y-auto landscape:flex-row landscape:overflow-visible">
+
+      {/* ── BRANDING column (left in landscape / top in portrait) ─────────── */}
+      <section className="land-in relative z-10 flex flex-col items-center px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-2 text-center sm:px-5 landscape:sticky landscape:top-0 landscape:h-dvh landscape:w-1/2 landscape:justify-center landscape:border-r landscape:border-[rgba(247,241,230,0.08)] landscape:pb-[max(1rem,env(safe-area-inset-bottom))] landscape:pt-[max(1rem,env(safe-area-inset-top))] md:pt-[max(2rem,env(safe-area-inset-top))]">
+
         <p className="border-2 border-[var(--yellow)] bg-[var(--green-deep)] px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.28em] text-[var(--yellow)]">
           Frame In Goa
         </p>
 
-        <div className="relative mt-4 w-full max-w-[min(17.5rem,82vw)] sm:mt-6 sm:max-w-[18.5rem]">
+        {/* Logo — always visible in 2-col layout; size adapts to column width */}
+        <div className="relative mt-4 w-full max-w-[min(17.5rem,82vw)] sm:mt-6 sm:max-w-[18.5rem] landscape:mt-3 landscape:max-w-[min(13rem,42vw)] md:max-w-[26rem]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/assets/title-transparent.svg"
@@ -107,28 +105,33 @@ export function LandingScreen({
           />
         </div>
 
-        <p className="mt-4 text-sm font-bold tracking-[0.2em] text-[var(--yellow)]">
+        <p className="mt-4 landscape:mt-2 text-sm font-bold tracking-[0.2em] text-[var(--yellow)]">
           #FrameInGoa
         </p>
-        <p className="mt-3 max-w-[18rem] text-sm leading-relaxed text-[var(--muted-on-green)]">
+        {/* Subtitle: hide on tight mobile landscape; always show on desktop */}
+        <p className="mt-3 max-w-[18rem] text-sm leading-relaxed text-[var(--muted-on-green)] [@media(orientation:landscape)_and_(max-height:600px)]:hidden">
           Profile frame or Builder ID — snap, brand, share.
         </p>
 
-        <div className="mecha-panel mt-7 flex w-full max-w-sm bg-[var(--green-deep)] p-1">
-          <ModeChip
-            active={mode === "frame"}
-            onClick={() => onModeChange("frame")}
-            label="Profile frame"
-          />
-          <ModeChip
-            active={mode === "pass"}
-            onClick={() => onModeChange("pass")}
-            label="Builder ID"
-          />
+        {/* Poster mark at bottom of branding column — desktop only (mobile landscape too tight) */}
+        <div className="hidden md:flex flex-col items-center mt-auto pt-10">
+          <MechaPosterMark />
+          <p className="mt-2 text-center text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted-on-green)]">
+            Stays on your device until you share
+          </p>
+        </div>
+      </section>
+
+      {/* ── CONTROLS column (right in landscape / below branding in portrait) */}
+      <section className="relative z-10 flex flex-col items-center px-4 pb-4 pt-2 sm:px-5 landscape:w-1/2 landscape:min-h-dvh landscape:justify-center landscape:overflow-y-auto landscape:py-[max(1rem,env(safe-area-inset-top))] landscape:pb-[max(1rem,env(safe-area-inset-bottom))] md:py-12">
+
+        <div className="mecha-panel flex w-full max-w-sm bg-[var(--green-deep)] p-1">
+          <ModeChip active={mode === "frame"} onClick={() => onModeChange("frame")} label="Profile frame" />
+          <ModeChip active={mode === "pass"} onClick={() => onModeChange("pass")} label="Builder ID" />
         </div>
 
         {mode === "pass" ? (
-          <div className="mt-5 flex w-full max-w-sm flex-col gap-3 text-left">
+          <div className="mt-5 landscape:mt-3 flex w-full max-w-sm flex-col gap-3 text-left">
             <label className="block">
               <span className="mb-1.5 block text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[var(--yellow)]">
                 Full name
@@ -159,12 +162,7 @@ export function LandingScreen({
           </div>
         ) : null}
 
-        <div className="mt-6 flex w-full max-w-sm flex-col gap-3">
-          {/*
-            iOS Chrome/Safari: programmatic input.click() on clipped/hidden
-            file inputs often no-ops. Overlay a real file input so the tap
-            hits the control directly.
-          */}
+        <div className="mt-6 landscape:mt-3 flex w-full max-w-sm flex-col gap-3">
           <label
             className={`mecha-btn relative overflow-hidden bg-[var(--magenta)] text-white ${
               pickDisabled ? "pointer-events-none opacity-45" : ""
@@ -210,9 +208,10 @@ export function LandingScreen({
             {error}
           </p>
         ) : null}
-      </header>
+      </section>
 
-      <footer className="relative z-10 flex flex-col items-center pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {/* Poster mark footer — portrait only (2-col shows it inside branding column) */}
+      <footer className="relative z-10 flex flex-col items-center pb-[max(1rem,env(safe-area-inset-bottom))] landscape:hidden">
         <MechaPosterMark />
         <p className="mt-2 text-center text-xs font-semibold uppercase tracking-[0.16em] text-[var(--muted-on-green)]">
           Stays on your device until you share
@@ -222,23 +221,13 @@ export function LandingScreen({
   );
 }
 
-function ModeChip({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
+function ModeChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={`flex-1 py-2.5 text-sm font-bold transition ${
-        active
-          ? "bg-[var(--yellow)] text-[var(--black)]"
-          : "text-[var(--muted-on-green)]"
+        active ? "bg-[var(--yellow)] text-[var(--black)]" : "text-[var(--muted-on-green)]"
       }`}
     >
       {label}
@@ -246,7 +235,6 @@ function ModeChip({
   );
 }
 
-/** Goa sunset — striped sun, palms, surf. Static paths for hydration safety. */
 function MechaPosterMark() {
   return (
     <svg width="240" height="88" viewBox="0 0 240 88" fill="none" aria-hidden>
@@ -254,34 +242,15 @@ function MechaPosterMark() {
       <rect x="92" y="53" width="56" height="3" fill="var(--green)" />
       <rect x="92" y="58.5" width="56" height="3.5" fill="var(--green)" />
       <rect x="92" y="63.5" width="56" height="3" fill="var(--green)" />
-
-      <path
-        d="M88 24 q5 -4 10 0 M142 18 q5 -4 10 0"
-        stroke="var(--cream)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        opacity="0.7"
-      />
-
+      <path d="M88 24 q5 -4 10 0 M142 18 q5 -4 10 0" stroke="var(--cream)" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
       <PosterPalm />
-      <g transform="translate(240,0) scale(-1,1)">
-        <PosterPalm />
-      </g>
-
+      <g transform="translate(240,0) scale(-1,1)"><PosterPalm /></g>
       <rect x="16" y="66" width="208" height="4" fill="var(--magenta)" />
-
-      <path
-        d="M74 77 q9 -4 18 0 t18 0 t18 0 t18 0 M84 83 q9 -4 18 0 t18 0 t18 0"
-        stroke="var(--cream)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        opacity="0.45"
-      />
+      <path d="M74 77 q9 -4 18 0 t18 0 t18 0 t18 0 M84 83 q9 -4 18 0 t18 0 t18 0" stroke="var(--cream)" strokeWidth="2" strokeLinecap="round" opacity="0.45" />
     </svg>
   );
 }
 
-/** Single leaning palm rooted at the horizon; mirrored for the right side. */
 function PosterPalm() {
   return (
     <g fill="var(--cream)">

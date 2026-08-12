@@ -1,3 +1,16 @@
+async function blobToPng(source: Blob): Promise<Blob> {
+  const bmp = await createImageBitmap(source);
+  const canvas = Object.assign(document.createElement("canvas"), {
+    width: bmp.width,
+    height: bmp.height,
+  });
+  canvas.getContext("2d")!.drawImage(bmp, 0, 0);
+  bmp.close();
+  return new Promise<Blob>((res, rej) =>
+    canvas.toBlob((b) => (b ? res(b) : rej(new Error("png conversion failed"))), "image/png"),
+  );
+}
+
 export function getAppUrl(): string {
   if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_APP_URL) {
     return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
@@ -58,11 +71,12 @@ export async function shareNative(
   }
 }
 
-export type ShareToXResult = "shared" | "cancelled" | "intent";
+export type ShareToXResult = "shared" | "cancelled" | "intent" | "intent-clipboard";
 
 /**
- * Mobile-first X: same Web Share path so the JPEG can attach when the user picks X.
- * Fallback (no file share): open X compose with caption only — caller should save the photo.
+ * Mobile-first X: native Web Share attaches the JPEG when user picks X.
+ * Desktop/fallback: opens X compose (text pre-filled) + copies PNG to clipboard so
+ * the user can Ctrl+V / ⌘V to attach the image in the X compose window.
  */
 export async function shareToX(
   readyFile: File,
@@ -70,22 +84,43 @@ export async function shareToX(
 ): Promise<ShareToXResult> {
   const caption = buildShareCaption(opts);
 
+  // 1. Best path: OS share sheet with image attached (mobile)
   if (canShareFiles(readyFile)) {
     try {
-      await navigator.share({
-        files: [readyFile],
-        text: caption,
-        title: "HH Goa 2026",
-      });
+      await navigator.share({ files: [readyFile], text: caption, title: "HH Goa 2026" });
       return "shared";
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        return "cancelled";
-      }
+      if (err instanceof DOMException && err.name === "AbortError") return "cancelled";
     }
   }
 
+  // 2. Desktop/fallback: start clipboard write synchronously (preserves user-gesture
+  //    permission for clipboard API), then open X intent window (also synchronous).
   const intent = `https://x.com/intent/post?text=${encodeURIComponent(caption)}`;
+
+  let clipboardPromise: Promise<boolean> | null = null;
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.clipboard?.write &&
+    typeof ClipboardItem !== "undefined"
+  ) {
+    try {
+      // Pass Promise<Blob> directly — browser holds permission granted here, resolves blob async.
+      clipboardPromise = navigator.clipboard
+        .write([new ClipboardItem({ "image/png": blobToPng(readyFile) })])
+        .then(() => true)
+        .catch(() => false);
+    } catch {
+      // ClipboardItem not supported in this browser
+    }
+  }
+
   window.open(intent, "_blank", "noopener,noreferrer");
+
+  if (clipboardPromise) {
+    const copied = await clipboardPromise;
+    if (copied) return "intent-clipboard";
+  }
+
   return "intent";
 }

@@ -32,9 +32,100 @@ export function ShareScreen({
   onShareX,
   onRetake,
 }: ShareScreenProps) {
+  const statusText = error ? null : sharing ? (
+    <p className="text-sm font-bold text-[var(--yellow)]" aria-live="polite">
+      Opening share…
+    </p>
+  ) : (
+    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted-on-green)] landscape:text-xs">
+      {canNativeShare
+        ? "Tap Share — pick WhatsApp, X, or any app"
+        : "Save your photo, then share from your gallery"}
+    </p>
+  );
+
+  const hintText =
+    hint && !error ? (
+      <p
+        className="text-center text-xs font-semibold text-[var(--ink-soft)]"
+        aria-live="polite"
+      >
+        {hint}
+      </p>
+    ) : webViewSave ? (
+      <p className="text-center text-xs text-[var(--ink-soft)]">
+        Long-press the photo to save in this browser
+      </p>
+    ) : !canNativeShare ? (
+      <p className="text-center text-xs text-[var(--ink-soft)]">
+        On your phone, open the live HTTPS site for one-tap share
+      </p>
+    ) : null;
+
+  const buttons = (
+    <>
+      {canNativeShare ? (
+        <button
+          type="button"
+          onClick={onShareNative}
+          disabled={sharing}
+          className="flex w-full items-center justify-center gap-2 border-[3px] border-[var(--black)] bg-[var(--magenta)] py-3.5 text-base font-bold uppercase tracking-[0.14em] text-white shadow-[4px_4px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-[2px_2px_0_0_#111] disabled:opacity-40"
+        >
+          <ShareIcon />
+          Share
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={sharing || webViewSave}
+          className="flex w-full items-center justify-center gap-2 border-[3px] border-[var(--black)] bg-[var(--yellow)] py-3.5 text-base font-bold uppercase tracking-[0.14em] text-[var(--black)] shadow-[4px_4px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-[2px_2px_0_0_#111] disabled:opacity-40"
+        >
+          <DownloadIcon />
+          {webViewSave ? "Long-press photo" : "Save photo"}
+        </button>
+      )}
+
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        {canNativeShare ? (
+          <SecondaryAction
+            label={webViewSave ? "Save" : "Save"}
+            onClick={onDownload}
+            disabled={sharing || webViewSave}
+            title={
+              webViewSave
+                ? "Long-press the photo to save"
+                : "Download JPEG to your phone"
+            }
+            tone="yellow"
+          >
+            <DownloadIcon />
+          </SecondaryAction>
+        ) : null}
+        <SecondaryAction
+          label="Post to X"
+          onClick={onShareX}
+          disabled={sharing}
+          title={
+            canNativeShare
+              ? "Opens share — tap X to post with photo"
+              : "Opens X with caption; image copied to clipboard"
+          }
+          tone="green"
+          className={canNativeShare ? undefined : "col-span-2"}
+        >
+          <XIcon />
+        </SecondaryAction>
+      </div>
+
+      {hintText}
+    </>
+  );
+
   return (
-    <div className="flex min-h-dvh flex-col text-[var(--cream)]">
-      <header className="flex shrink-0 items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 sm:px-5">
+    <div className="flex min-h-dvh flex-col landscape:flex-row text-[var(--cream)]">
+      {/* Header — hidden in landscape (info moves into right panel) */}
+      <header className="flex shrink-0 items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 sm:px-5 landscape:hidden">
         <p className="mecha-title font-[family-name:var(--font-display)] text-base text-[var(--yellow)] sm:text-lg">
           HH GOA
         </p>
@@ -43,12 +134,13 @@ export function ShareScreen({
         </p>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-y-auto px-3 py-2 sm:gap-3 sm:px-5 sm:py-3">
+      {/* Main — image area */}
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-y-auto px-3 py-2 sm:gap-3 sm:px-5 sm:py-3 landscape:py-3 landscape:px-4">
         <div
           className={`share-photo-enter mecha-panel relative w-full overflow-hidden bg-[var(--cream)] ${
             format === "pass"
-              ? "max-w-[min(100%,min(420px,90dvw))]"
-              : "max-w-[min(100%,min(420px,85dvw))]"
+              ? "max-w-[min(100%,min(420px,90dvw))] landscape:max-w-none landscape:h-full landscape:w-auto"
+              : "max-w-[min(100%,min(420px,85dvw))] landscape:max-w-none landscape:h-full landscape:w-auto"
           }`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -61,15 +153,15 @@ export function ShareScreen({
             }
             className={`mx-auto w-full object-contain ${
               format === "pass"
-                ? "aspect-[263/388] max-h-[min(56dvh,580px)]"
-                : "aspect-square max-h-[min(48dvh,420px)]"
+                ? "aspect-[263/388] max-h-[min(56dvh,580px)] landscape:aspect-auto landscape:max-h-[88dvh] landscape:w-auto"
+                : "aspect-square max-h-[min(48dvh,420px)] landscape:aspect-auto landscape:max-h-[88dvh] landscape:w-auto"
             }`}
             draggable={false}
           />
         </div>
 
         {format === "pass" && serial ? (
-          <p className="border-2 border-[var(--yellow)] bg-[var(--green-deep)] px-2.5 py-1 font-mono text-xs font-bold tracking-wider text-[var(--yellow)] sm:px-3 sm:text-sm">
+          <p className="border-2 border-[var(--yellow)] bg-[var(--green-deep)] px-2.5 py-1 font-mono text-xs font-bold tracking-wider text-[var(--yellow)] landscape:hidden sm:px-3 sm:text-sm">
             {serial}
           </p>
         ) : null}
@@ -81,99 +173,50 @@ export function ShareScreen({
           >
             {error}
           </p>
-        ) : sharing ? (
-          <p className="text-sm font-bold text-[var(--yellow)]" aria-live="polite">
-            Opening share…
-          </p>
         ) : (
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--muted-on-green)] sm:text-sm">
-            {canNativeShare
-              ? "Tap Share — pick WhatsApp, X, or any app"
-              : "Save your photo, then share from your gallery"}
-          </p>
+          <div className="landscape:hidden">{statusText}</div>
         )}
       </main>
 
-      <footer className="shrink-0 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1 sm:px-4 sm:pt-2">
-        <div className="mecha-panel mx-auto flex w-full max-w-md flex-col gap-3 bg-[var(--cream)] px-3 py-4 text-[var(--ink)] sm:gap-4 sm:px-4 sm:py-5">
-          {/* Primary mobile action */}
-          {canNativeShare ? (
-            <button
-              type="button"
-              onClick={onShareNative}
-              disabled={sharing}
-              className="flex w-full items-center justify-center gap-2 border-[3px] border-[var(--black)] bg-[var(--magenta)] py-3.5 text-base font-bold uppercase tracking-[0.14em] text-white shadow-[4px_4px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-[2px_2px_0_0_#111] disabled:opacity-40"
-            >
-              <ShareIcon />
-              Share
-            </button>
+      {/* Footer — portrait: full-width button panel; landscape: right sidebar */}
+      <footer className="shrink-0 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1 sm:px-4 sm:pt-2 landscape:flex landscape:w-72 landscape:flex-col landscape:justify-center landscape:gap-3 landscape:px-5 landscape:pb-[max(1rem,env(safe-area-inset-bottom))] landscape:pt-[max(0.75rem,env(safe-area-inset-top))]">
+        {/* Compact brand line for landscape (replaces hidden header) */}
+        <div className="hidden landscape:flex items-center justify-between mb-1">
+          <p className="mecha-title font-[family-name:var(--font-display)] text-sm text-[var(--yellow)]">
+            HH GOA
+          </p>
+          <p className="border-2 border-[var(--magenta)] px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.14em] text-[var(--magenta)]">
+            #FrameInGoa
+          </p>
+        </div>
+
+        {/* Serial badge in landscape sidebar */}
+        {format === "pass" && serial ? (
+          <p className="hidden landscape:block border-2 border-[var(--yellow)] bg-[var(--green-deep)] px-2.5 py-1 font-mono text-xs font-bold tracking-wider text-[var(--yellow)] text-center">
+            {serial}
+          </p>
+        ) : null}
+
+        {/* Status / error (landscape sidebar) */}
+        <div className="hidden landscape:block">
+          {error ? (
+            <p className="text-center text-sm text-[var(--danger)]" role="alert">
+              {error}
+            </p>
           ) : (
-            <button
-              type="button"
-              onClick={onDownload}
-              disabled={sharing || webViewSave}
-              className="flex w-full items-center justify-center gap-2 border-[3px] border-[var(--black)] bg-[var(--yellow)] py-3.5 text-base font-bold uppercase tracking-[0.14em] text-[var(--black)] shadow-[4px_4px_0_0_#111] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 enabled:active:shadow-[2px_2px_0_0_#111] disabled:opacity-40"
-            >
-              <DownloadIcon />
-              {webViewSave ? "Long-press photo" : "Save photo"}
-            </button>
+            statusText
           )}
+        </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            {canNativeShare ? (
-              <SecondaryAction
-                label={webViewSave ? "Save" : "Save"}
-                onClick={onDownload}
-                disabled={sharing || webViewSave}
-                title={
-                  webViewSave
-                    ? "Long-press the photo to save"
-                    : "Download JPEG to your phone"
-                }
-                tone="yellow"
-              >
-                <DownloadIcon />
-              </SecondaryAction>
-            ) : null}
-            <SecondaryAction
-              label="Post to X"
-              onClick={onShareX}
-              disabled={sharing}
-              title={
-                canNativeShare
-                  ? "Opens share — tap X to post with photo"
-                  : "Opens X with caption; save photo to attach"
-              }
-              tone="green"
-              className={canNativeShare ? undefined : "col-span-2"}
-            >
-              <XIcon />
-            </SecondaryAction>
-          </div>
-
-          {hint && !error ? (
-            <p
-              className="text-center text-xs font-semibold text-[var(--ink-soft)]"
-              aria-live="polite"
-            >
-              {hint}
-            </p>
-          ) : webViewSave ? (
-            <p className="text-center text-xs text-[var(--ink-soft)]">
-              Long-press the photo to save in this browser
-            </p>
-          ) : !canNativeShare ? (
-            <p className="text-center text-xs text-[var(--ink-soft)]">
-              On your phone, open the live HTTPS site for one-tap share
-            </p>
-          ) : null}
+        <div className="mecha-panel mx-auto flex w-full max-w-md flex-col gap-3 bg-[var(--cream)] px-3 py-4 text-[var(--ink)] landscape:mx-0 landscape:max-w-none sm:gap-4 sm:px-4 sm:py-5">
+          {buttons}
         </div>
 
         <button
           type="button"
           onClick={onRetake}
           disabled={sharing}
-          className="mecha-panel mt-3 flex w-full max-w-md mx-auto items-center justify-center gap-2 bg-transparent py-2.5 text-sm font-bold uppercase tracking-[0.12em] text-[var(--yellow)] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 disabled:opacity-40 sm:mt-4 sm:py-3"
+          className="mecha-panel mt-3 flex w-full max-w-md mx-auto items-center justify-center gap-2 bg-transparent py-2.5 text-sm font-bold uppercase tracking-[0.12em] text-[var(--yellow)] transition enabled:active:translate-x-0.5 enabled:active:translate-y-0.5 disabled:opacity-40 landscape:mx-0 landscape:max-w-none landscape:mt-2 sm:mt-4 sm:py-3"
         >
           <RetakeIcon />
           Take again
